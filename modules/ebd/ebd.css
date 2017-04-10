@@ -1,0 +1,15 @@
+/*
+ * ENIGMA Bipolar Disorder Gateway
+ * Author: Mona Wong
+ */
+
+.breadcrumb {
+    visibility: hidden;
+}
+
+.info {
+    font-size: larger;
+    font-weight: bold;
+    padding-bottom: 5px;
+    padding-top: 5px;
+}

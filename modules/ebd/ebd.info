@@ -1,0 +1,7 @@
+name = ENIGMA Bipolar Disorder: Brain Age Analysis
+description = Custom module for gateway
+package = ENIGMA Bipolar Disorder
+core = 7.x
+php = 5.5.9
+version = 7.x-0.1
+;stylesheets[all][] = ebd.css

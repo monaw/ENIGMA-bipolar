@@ -1,0 +1,937 @@
+<?php
+
+/**
+ * Copyright 2017 by Eyler Lab @ UCSD (http://www.bipolar-aging.com)
+ *
+ * This module contains functions to support the aging analysis gateway
+ *
+ * Author: Mona Wong
+ **/
+
+module_load_include ( 'inc', 'node', 'node.pages' );
+
+
+// Our CSS has to be added this way to overwrite settings from the theme
+drupal_add_css ( drupal_get_path ( 'module', 'ebd') . '/ebd.css',
+    array ( 'group' => CSS_THEME, 'weight' => 1000, 'every_page' => FALSE ) );
+
+
+// Global variables
+
+global $EBD_AGREEMENT_STATUS_NO;
+$EBD_AGREEMENT_STATUS_NO = 2;
+
+global $EBD_AGREEMENT_STATUS_OK;
+$EBD_AGREEMENT_STATUS_OK = 1;
+
+global $EBD_AGREEMENT_STATUS_REDO;
+$EBD_AGREEMENT_STATUS_REDO = 3;
+
+global $EBD_BLANK_PAGE;
+$EBD_BLANK_PAGE = "node/14";
+
+global $EBD_DEBUG_FILE;
+$EBD_DEBUG_FILE = "/tmp/debug.txt";
+
+global $EBD_LOGOUT_URL;
+$EBD_LOGOUT_URL = "user/logout";
+
+global $EBD_PRIVATE_URI_PREFIX;
+$EBD_PRIVATE_URI_PREFIX = "private://csv/";
+
+global $EBD_UPLOAD_INFO;
+$EBD_UPLOAD_INFO = "ebd_upload_info";
+
+global $EBD_UPLOAD_STEPS;
+$EBD_UPLOAD_STEPS = array ( 1 => "covariates", 2 => "SurfAvg", 3 => "ThickAvg",
+    4 => "volumes", 5 => "save" );
+
+global $EBD_UPLOAD_URL;
+$EBD_UPLOAD_URL = "upload";
+
+
+/**
+ * Create, save and return an agreements node with the given values
+ **/
+function ebd_agreement_create_node ( $values )
+{
+    global $user;
+
+    $userx = user_load ( $user->uid );
+
+    $node = new stdClass();
+    $node->type = "agreements";
+    $node->title = $userx->field_user_pi[LANGUAGE_NONE][0]['value'];
+    $node->is_new = TRUE;
+    $node->uid = $user->uid;
+    $node->status = 1;
+    $node->field_agreements_contribute = ebd_value_field_create
+        ( $values['contribute'] );
+    $node->field_agreements_storing = ebd_value_field_create
+        ( $values['storing'] );
+    $node->field_agreements_additional = ebd_value_field_create
+        ( $values['additional'] );
+    $node->field_agreements_shared = ebd_value_field_create
+        ( $values['shared'] );
+    if ( isset ( $values['usc'] ) )
+        $node->field_agreements_usc = ebd_value_field_create ( $values['usc'] );
+
+    node_save ( $node );
+    return ( $node );
+}
+
+
+/**
+ * Create the user agreement form
+ **/
+function ebd_agreement_form ( $form, &$form_state )
+{
+    global $user;
+    global $EBD_DEBUG_FILE;
+    global $EBD_AGREEMENT_STATUS_NO;
+    global $EBD_AGREEMENT_STATUS_OK;
+    global $EBD_UPLOAD_URL;
+
+    //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    //fwrite ( $debug, "entered ebd_agreement_form\n" );
+
+    $userx = user_load ( $user->uid );
+    //fwrite ( $debug, "userx : " . print_r ( $userx, TRUE ) . "\n" );
+
+    if ( ! empty ( $userx->field_user_agreement_status ) )
+    {
+        $status =
+            $userx->field_user_agreement_status[LANGUAGE_NONE][0]['value'];
+        if ( $status == $EBD_AGREEMENT_STATUS_OK )
+            drupal_set_message
+                ( "You've already agreed.  If you wish to revoke or update your agreement, please complete a new agreement below.  If you wish to re-upload your data, click " .
+                l ( "here", $EBD_UPLOAD_URL ) );
+        else if ( $status == $EBD_AGREEMENT_STATUS_NO )
+            drupal_set_message
+                ( "You've previously chosen not to participate.  If you would like to participate now, please complete a new agreement below.",
+                'warning' );
+    }
+
+    drupal_set_title ( "ENIGMA Brain Age Analysis Agreement" );
+
+    $form = array();
+    // Instead of using the node_add and fixing how things are display, it is
+    // easier to just create the agreement form
+    //$form = node_add ( "agreements" );
+    //fwrite ( $debug, "form 2 : " . print_r ( $form, TRUE ) . "\n" );
+
+    $form['pi'] = array (
+        '#title' => 'PI : ' . $userx->field_user_pi[LANGUAGE_NONE][0]['value'],
+        '#type' => 'item',
+    );
+
+    $form['email'] = array (
+        '#title' => 'Your email : ' . $userx->mail,
+        '#type' => 'item',
+    );
+
+    $form['hr'] = array (
+        '#markup' => '<hr>',
+    );
+
+    $form['contribute'] = array (
+        '#title' => 'Do you agree to contribute data from your cohort (cortical/subcortical brain measures and clinical/demographic variables) for the sole purpose of addressing the aims outlined in the brain aging secondary proposal?',
+        '#required' => TRUE,
+        '#options' => array ( '1' => 'Yes', '0' => 'No' ),
+        '#type' => 'radios',
+    );
+
+    $form['storing'] = array (
+        '#title' => 'Do you agree to securely storing data from your cohort (brain measures and clinical/demographic variables) on the XSEDE Jetstream and UCSD servers (PI- Lisa Eyler) where only the analysts named in the proposal will have access for the specific aims of this project?',
+        '#options' => array ( '1' => 'Yes', '0' => 'No' ),
+        '#type' => 'radios',
+        '#states' => array (
+            'visible' =>
+                array ( ':input[name="contribute"]' => array ( 'value' => '1' ) ),
+        ),
+    );
+
+    $form['additional'] = array (
+        '#title' => 'Are there any additional formal requirements or agreements that must be completed to contribute your data to the brain aging project aside from PI permission (e.g. IRB approval, material transfer agreement, etc.)?',
+        '#options' => array ( '1' => 'Yes', '0' => 'No' ),
+        '#type' => 'radios',
+        '#states' => array (
+            'visible' =>
+                array ( ':input[name="contribute"]' => array ( 'value' => '1' ),
+                    ':input[name="storing"]' => array ( 'value' => '1' ) ),
+        ),
+    );
+
+    $form['shared'] = array (
+        '#title' => 'Have you already shared CorticalMeasuresENIGMA_SurfAvg.csv, CorticalMeasuresENIGMA_ThickAvg.csv, LandRVolumes.csv, and covariates.csv with the USC group?',
+        '#options' => array ( '1' => 'Yes', '0' => 'No' ),
+        '#type' => 'radios',
+        '#states' => array (
+            'visible' =>
+                array ( ':input[name="contribute"]' => array ( 'value' => '1' ),
+
+                    ':input[name="storing"]' => array ( 'value' => '1' ),
+                    ':input[name="additional"]' => array ( 'value' => '0' ) ),
+
+        ),
+    );
+
+    $form['usc'] = array (
+        '#title' => 'Do you agree to have the USC group share these data with the brain age project directly instead of uploading them yourself?',
+        '#options' => array ( '1' => 'Yes', '0' => 'No' ),
+        '#type' => 'radios',
+        '#states' => array (
+            'visible' => array (
+                ':input[name="contribute"]' => array ( 'value' => '1' ),
+                ':input[name="storing"]' => array ( 'value' => '1' ),
+                ':input[name="additional"]' => array ( 'value' => '0' ),
+                ':input[name="shared"]' => array ( 'value' => '1' ),
+            ),
+            'required' =>
+                array ( ':input[name="shared"]' => array ( 'value' => '1' ) ),
+        ),
+    );
+
+    $form['submit'] = array ( '#type' => 'submit', '#value' => 'Submit' );
+
+    return ( $form );
+}
+
+
+/**
+ * Handle the user submission form
+ **/
+function ebd_agreement_form_submit ( $form, &$form_state )
+{
+    global $user;
+
+    global $EBD_AGREEMENT_STATUS_NO;
+    global $EBD_AGREEMENT_STATUS_OK;
+    global $EBD_AGREEMENT_STATUS_REDO;
+    global $EBD_BLANK_PAGE;
+    global $EBD_DEBUG_FILE;
+    global $EBD_LOGOUT_URL;
+
+    //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    //fwrite ( $debug, "entered ebd_agreement_form_submit\n" );
+    $values = $form_state['values'];
+    //fwrite ( $debug, "values : " . print_r ( $values, TRUE ) . "\n" );
+    $node = ebd_agreement_create_node ( $values );
+    //fwrite ( $debug, "node : " . print_r ( $node, TRUE ) . "\n" );
+
+    $userx = user_load ( $user->uid );
+    //fwrite ( $debug, "userx : " . print_r ( $userx, TRUE ) . "\n" );
+
+    drupal_get_messages();
+
+    if ( $values['contribute'] === "0" )
+    {
+        drupal_set_message
+            ( "You've chosen not to contribute your data.  You may now " .
+            l ( "logout", $EBD_LOGOUT_URL ) . ".  Thank you." );
+        $userx->field_user_agreement_status[LANGUAGE_NONE][0]['value'] =
+            $EBD_AGREEMENT_STATUS_NO;
+        user_save ( $userx );
+        drupal_goto ( $EBD_BLANK_PAGE );
+    }
+
+    else if ( $values['storing'] === "0" )
+    {
+        drupal_set_message
+            ( "You've chosen not to allow us to store your data.  You may now " .
+            l ( "logout", $EBD_LOGOUT_URL ) . ".  Thank you." );
+        $userx->field_user_agreement_status[LANGUAGE_NONE][0]['value'] =
+            $EBD_AGREEMENT_STATUS_NO;
+        user_save ( $userx );
+        drupal_goto ( $EBD_BLANK_PAGE );
+    }
+
+    else if ( $values['additional'] === "1" )
+    {
+        drupal_set_message
+            ( "All approvals must be in place before uploading data, please return to the website and complete another agreement form when all approvals have been secured.  You may now " .
+            l ( "logout", $EBD_LOGOUT_URL ) . ".  Thank you.", 'warning' );
+        $userx->field_user_agreement_status[LANGUAGE_NONE][0]['value'] =
+            $EBD_AGREEMENT_STATUS_REDO;
+        user_save ( $userx );
+        drupal_goto ( $EBD_BLANK_PAGE );
+    }
+
+    else if ( $values['shared'] === "1" && $values['usc'] === "1" )
+    {
+        drupal_set_message
+            ( "Thank you!  We will request your data from the USC group. You may now " .
+            l ( "logout", $EBD_LOGOUT_URL ) . "." );
+        $userx->field_user_agreement_status[LANGUAGE_NONE][0]['value'] =
+            $EBD_AGREEMENT_STATUS_OK;
+        user_save ( $userx );
+        drupal_goto ( $EBD_BLANK_PAGE );
+    }
+
+    else 
+        drupal_goto ( "upload" );
+}
+
+
+/**
+ * Validate the user agreement form.  The only thing that requires validating
+ * is the last question.
+ **/
+function ebd_agreement_form_validate ( $form, &$form_state )
+{
+    //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    //fwrite ( $debug, "entered ebd_agreement_form_validate\n" );
+    $values = $form_state['values'];
+    //fwrite ( $debug, "values : " . print_r ( $values, TRUE ) . "\n" );
+
+    drupal_get_messages();
+
+    if ( $values['contribute'] === "1" && $values['storing'] === "1" &&
+        $values['additional'] === "0" && $values['shared'] === "1" &&
+        $values['usc'] == NULL )
+        form_set_error ( 'usc',
+            'Please answer last question on whether you agree to have the USC group share your data with us?' );
+}
+
+
+/**
+ * Check the given covariates file.  Will display error if found and return 0.
+ * @return NULL - if error found in file; otherwise will return a hashed
+ *                  array of the data read in and validated.
+ **/ 
+function ebd_covariates_check ( $file )
+{
+    global $EBD_DEBUG_FILE;
+    global $EBD_PRIVATE_URI_PREFIX;
+
+    $debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    fwrite ( $debug, "entered ebd_covariates_check\n" );
+
+    $data = NULL;
+
+    if ( empty ( $file ) )
+        return ( $data );
+
+    $file_handle = fopen ( $file->uri, "r" );
+
+    // First, check header
+    $age_index = -1;
+    $dx_index = -1;
+    $gender_index = -1;
+    $headers = fgetcsv ( $file_handle, 0, "," );
+    //fwrite ( $debug, "headers : " . print_r ( $headers, TRUE ) . "\n" );
+    $sites = array();
+    $subjid_index = -1;
+
+    foreach ( $headers as $index => $header )
+    {
+        //fwrite ( $debug, "index : " . print_r ( $index, TRUE ) . "\n" );
+        //fwrite ( $debug, "header : " . print_r ( $header, TRUE ) . "\n" );
+
+        if ( strcasecmp ( $header, "SubjID" ) === 0 )
+            $subjid_index = $index;
+        else if ( strcasecmp ( $header, "Dx" ) === 0 )
+            $dx_index = $index;
+        else if ( strcasecmp ( $header, "Age" ) === 0 )
+            $age_index = $index;
+        else if ( strcasecmp ( $header, "Sex" ) === 0 )
+            $gender_index = $index;
+        else
+        {
+            $site = substr ( $header, 0, 4 );
+            if ( strcasecmp ( $site, "Site" ) === 0 )
+                $sites[$index] = $header;
+        }
+    }
+    //fwrite ( $debug, "subjid_index : " . print_r ( $subjid_index, TRUE ) . "\n" );
+    //fwrite ( $debug, "dx_index : " . print_r ( $dx_index, TRUE ) . "\n" );
+    //fwrite ( $debug, "age_index : " . print_r ( $age_index, TRUE ) . "\n" );
+    //fwrite ( $debug, "gender_index : " . print_r ( $gender_index, TRUE ) . "\n" );
+    //fwrite ( $debug, "sites : " . print_r ( $sites, TRUE ) . "\n" );
+
+    // Check required columns' index
+    $cont = TRUE;
+
+    if ( $subjid_index == -1 )
+    {
+        drupal_set_message ( "No SubjID column found!", 'error', FALSE );
+        $cont = FALSE;
+    }
+
+    if ( $dx_index == -1 )
+    {
+        drupal_set_message ( "No Dx column found!", 'error', FALSE );
+        $cont = FALSE;
+    }
+
+    if ( $age_index == -1 )
+    {
+        drupal_set_message ( "No Age column found!", 'error', FALSE );
+        $cont = FALSE;
+    }
+
+    if ( $gender_index == -1 )
+    {
+        drupal_set_message ( "No Sex column found!", 'error', FALSE );
+        $cont = FALSE;
+    }
+
+    if ( ! $cont )
+        return ( $data );
+
+    $cont = TRUE;
+    $data = array();
+    $entries = array();
+    $line_counter = 2;
+    $subjects = array();
+
+    // Now check and save each line...
+    while ( ( $line = fgetcsv ( $file_handle, 0, "," ) ) != FALSE )
+    {
+        //fwrite ( $debug, "line : " . print_r ( $line, TRUE ) . "\n" );
+
+        if ( empty ( $line[$subjid_index] ) )
+        {
+            drupal_set_message ( "Missing SubjID on line " . $line_counter,
+                'error', FALSE );
+            $cont = FALSE;
+            break;
+        } 
+
+        if ( $line[$dx_index] !== '0' && $line[$dx_index] !== '1' )
+        {
+            drupal_set_message ( "Invalid Dx (must be 0 or 1) on line " .
+                $line_counter, 'error', FALSE );
+            $cont = FALSE;
+            break;
+        }
+
+        if ( empty ( $line[$age_index] ) || ( int ) $line[$age_index] <= 0 )
+        {
+            drupal_set_message ( "Invalid Age (must be > 0 ) on line " .
+                $line_counter, 'error', FALSE );
+            $cont = FALSE;
+            break;
+        }
+
+        if ( $line[$gender_index] !== '1' && $line[$gender_index] !== '2' )
+        {
+            drupal_set_message ( "Invalid Sex (must be 1 or 2) on line " .
+                $line_counter, 'error', FALSE );
+            $cont = FALSE;
+            break;
+        }
+
+        $entry = array();
+        $entry[$subjid_index] = $line[$subjid_index];
+        $entry[$dx_index] = $line[$dx_index];
+        $entry[$age_index] = $line[$age_index];
+        $entry[$gender_index] = $line[$gender_index];
+        $subjects[] = $line[$subjid_index];
+
+        if ( ! empty ( $sites ) )
+        {
+            foreach ( $sites as $site_index => $site_name )
+                $entry[$site_index] = $sites[$site_index];
+        }
+
+        $entries[] = $entry;
+        $line_counter++;
+    }
+    //fwrite ( $debug, "cont : " . print_r ( $cont, TRUE ) . "\n" );
+    //fwrite ( $debug, "data : " . print_r ( $data, TRUE ) . "\n" );
+
+    if ( $cont )
+    {
+        $data['entries'] = $entries;
+        $data['subjects'] = $subjects;
+    }
+    else
+        $data = NULL;
+
+    return ( $data );
+}
+
+
+/**
+ * Implements hook_menu
+ **/
+function ebd_menu()
+{
+    $items['agreement'] = array (
+        'title' => "Agreement",
+        'access arguments' => array ( "Upload data" ),
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array ( 'ebd_agreement_form' ),
+        'type' => MENU_CALLBACK,
+    );
+
+    $items['upload'] = array (
+        'title' => "Upload",
+        'access arguments' => array ( "Upload data" ),
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array ( 'ebd_upload_multipage_form' ),
+        'type' => MENU_CALLBACK,
+    );
+
+    return ( $items );
+}
+
+
+/**
+ * Implement hook_permission
+ **/
+function ebd_permission()
+{
+    $permissions = array();
+
+    $permissions =
+        array ( 'Upload data' => array ( 'title' => t ( 'Upload data' ) ),
+    );
+
+    return ( $permissions );
+}
+
+
+/**
+ * Check the given file.  Will display error if found and return 0.
+ * @return TRUE if file is ok, FALSE otherwise
+ **/ 
+function ebd_upload_check ( $info, $file )
+{
+    global $EBD_DEBUG_FILE;
+    global $EBD_PRIVATE_URI_PREFIX;
+
+    $debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    fwrite ( $debug, "entered ebd_upload_check\n" );
+
+    $answer = FALSE;
+
+    if ( empty ( $info ) || empty ( $file ) )
+        return ( $answer );
+    //fwrite ( $debug, "info : " . print_r ( $info, TRUE ) . "\n" );
+
+    $file_handle = fopen ( $file->uri, "r" );
+
+    // First, check header
+    $headers = fgetcsv ( $file_handle, 0, "," );
+    //fwrite ( $debug, "headers : " . print_r ( $headers, TRUE ) . "\n" );
+    $subjid_index = -1;
+
+    foreach ( $headers as $index => $header )
+    {
+        //fwrite ( $debug, "index : " . print_r ( $index, TRUE ) . "\n" );
+        //fwrite ( $debug, "header : " . print_r ( $header, TRUE ) . "\n" );
+
+        if ( strcasecmp ( $header, "SubjID" ) === 0 )
+        {
+            $subjid_index = $index;
+            break;
+        }
+    }
+    //fwrite ( $debug, "subjid_index : " . print_r ( $subjid_index, TRUE ) . "\n" );
+
+    // Check required columns' index
+    if ( $subjid_index == -1 )
+    {
+        drupal_set_message ( "No SubjID column found!", 'error', FALSE );
+        return ( $answer );
+    }
+
+    $cont = TRUE;
+    //$answer = array();
+    $line_counter = 2;
+    $subjects = $info['covariates']['subjects'];
+
+    // Now check each line...
+    while ( ( $line = fgetcsv ( $file_handle, 0, "," ) ) != FALSE )
+    {
+        //fwrite ( $debug, "line : " . print_r ( $line, TRUE ) . "\n" );
+
+        if ( empty ( $line[$subjid_index] ) )
+        {
+            drupal_set_message ( "Missing SubjID on line " . $line_counter,
+                'error', FALSE );
+            $cont = FALSE;
+            break;
+        } 
+        else
+        {
+            $subjectID = $line[$subjid_index];
+            $key = array_search ( $subjectID, $subjects );
+            //fwrite ( $debug, "key : " . print_r ( $key, TRUE ) . "\n" );
+
+            if ( $key === FALSE )
+            {
+                drupal_set_message ( 'Invalid SubjID "' . $subjectID .
+                    '" on line ' . $line_counter .
+                    " - SubjID does not exists in covariates.csv!", 'error' );
+                $cont = FALSE;
+                break;
+            }
+            else
+            {
+                //fwrite ( $debug, "unsetting subject : " . print_r ( $subjectID, TRUE ) . "\n" );
+                unset ( $subjects[$key] );
+
+                foreach ( $line as $i => $value )
+                {
+                    $column = ( int ) $i + 1;
+                    //fwrite ( $debug, "i : " . print_r ( $i, TRUE ) . "\n" );
+                    //fwrite ( $debug, "value : " . print_r ( $value, TRUE ) . "\n" );
+                    if ( empty ( $value ) )
+                    {
+                        //fwrite ( $debug, "empty value on line : " . print_r ( $line_counter, TRUE ) . "\n" );
+                        drupal_set_message ( 'Empty value for column ' .
+                            $column . ' on line ' . $line_counter, 'error' );
+                        $cont = FALSE;
+                        break 2;
+                    }
+                }
+            }
+        }
+
+        $line_counter++;
+    }
+    //fwrite ( $debug, "cont : " . print_r ( $cont, TRUE ) . "\n" );
+
+    //fwrite ( $debug, "subjects : " . print_r ( $subjects, TRUE ) . "\n" );
+    if ( $cont == TRUE && ! empty ( $subjects ) )
+    {
+        $num_subjects = count ( $subjects );
+        $message = "";
+
+        if ( $num_subjects == 1 )
+            $message = "The following subject is ";
+        else
+            $message = $num_subjects . " subjects are ";
+
+        drupal_set_message ( $message . 'missing from your file: ' .
+            implode ( ',', $subjects ), 'error' );
+        $cont = FALSE;
+    }
+
+    if ( ! $cont )
+        $answer = FALSE;
+    else
+        $answer = TRUE;
+
+    return ( $answer );
+}
+
+
+/**
+ * Create the multi-page user upload forms
+ **/
+function ebd_upload_multipage_form ( $form, &$form_state )
+{
+    global $user;
+    global $EBD_DEBUG_FILE;
+    global $EBD_PRIVATE_URI_PREFIX;
+    global $EBD_UPLOAD_INFO;
+    global $EBD_UPLOAD_STEPS;
+
+    $debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    fwrite ( $debug, "entered ebd_upload_multipage_form\n" );
+    //fwrite ( $debug, "form : " . print_r ( $form, TRUE ) . "\n" );
+    fwrite ( $debug, "form_state rebuild : " . print_r ( $form_state['rebuild'], TRUE ) . "\n" );
+
+    $description = "";
+    $max_file_size = file_upload_max_size();
+    $step = $EBD_UPLOAD_STEPS[1];
+    $timestamp = REQUEST_TIME;
+    $title = "";
+    $upload_info = array();
+
+    drupal_set_title ( "Upload your data..." );
+    drupal_get_messages();
+    drupal_get_messages ( 'status' );
+
+    if ( ! empty ( $form_state[$EBD_UPLOAD_INFO] ) )
+    {
+        $upload_info = $form_state[$EBD_UPLOAD_INFO];
+        //fwrite ( $debug, "upload_info : " . print_r ( $upload_info, TRUE ) . "\n" );
+        $timestamp = $upload_info['timestamp'];
+    }
+    //fwrite ( $debug, "timestamp : " . print_r ( $timestamp, TRUE ) . "\n" );
+
+    if ( ! empty ( $upload_info['step'] ) )
+        $step = $upload_info['step'];
+    fwrite ( $debug, "step : " . print_r ( $step, TRUE ) . "\n" );
+
+    // Create the form
+    $form = array();
+    $form["info"] = array ( '#markup' =>
+        '<div class=\"info\">This is a multi-step form to upload your 4 files one at a time</div>' );
+
+    if ( $step === $EBD_UPLOAD_STEPS[1] )
+    {
+        $form['timestamp'] = array ( '#type' => 'hidden',
+            '#value' => $timestamp );
+
+        $form["covariates_file"] = array (
+            '#title' => 'Step 1. Upload your covariates.csv file',
+            '#description' =>
+                'The file must contain at least SubjID, Dx, Age and Sex columns; Site# column(s) are optional. Column names are case-insensitive but must be spelled as noted.  Max file size is ' .
+                $max_file_size . ' bytes',
+            '#progress_indicator' => "bar",
+            '#required' => TRUE,
+            '#type' => "managed_file",
+            '#upload_location' => $EBD_PRIVATE_URI_PREFIX . $user->uid . "/" .
+                $timestamp . "/",
+            '#upload_validators' => array (
+                "file_validate_extensions" => array ( "csv" ),
+                'file_validate_size' => array ( $max_file_size ) ),
+        );
+    }
+
+    else if ( $step === $EBD_UPLOAD_STEPS[2] )
+    {
+        drupal_set_message ( count ( $upload_info['covariates']['subjects'] ) .
+            " subjects validated in covariates.csv", 'status', FALSE );
+
+        $form["surfavg_file"] = array (
+            '#title' =>
+                "Step 2. Upload your CorticalMeasuresENIGMA_SurfAvg.csv file",
+            '#description' =>
+                'SubjID must match those in covariates.csv and there must be be no empty cell. Max file size is ' .
+                $max_file_size . ' bytes',
+            '#progress_indicator' => "bar",
+            '#required' => TRUE,
+            '#type' => "managed_file",
+            '#upload_location' => $EBD_PRIVATE_URI_PREFIX . $user->uid . "/" .
+                $timestamp . "/",
+            '#upload_validators' => array (
+                "file_validate_extensions" => array ( "csv" ),
+                'file_validate_size' => array ( $max_file_size ) ),
+        );
+    }
+
+    else if ( $step === $EBD_UPLOAD_STEPS[3] )
+    {
+        drupal_set_message
+            ( 'CorticalMeasuresENIGMA_SurfAvg.csv file successfully validated' );
+
+        $form["thickavg_file"] = array (
+            '#title' =>
+                "Step 3. Upload your CorticalMeasuresENIGMA_ThickAvg.csv file",
+            '#description' =>
+                'SubjID must match those in covariates.csv and there must be be no empty cell. Max file size is ' .
+                $max_file_size . ' bytes',
+            '#progress_indicator' => "bar",
+            '#required' => TRUE,
+            '#type' => "managed_file",
+            '#upload_location' => $EBD_PRIVATE_URI_PREFIX . $user->uid . "/" .
+                $timestamp . "/",
+            '#upload_validators' => array (
+                "file_validate_extensions" => array ( "csv" ),
+                'file_validate_size' => array ( $max_file_size ) ),
+        );
+    }
+
+    else if ( $step === $EBD_UPLOAD_STEPS[4] )
+    {
+        drupal_set_message
+            ( 'CorticalMeasuresENIGMA_ThickAvg.csv file successfully validated' );
+
+        $form["volumes_file"] = array (
+            '#title' =>
+                "Step 4. Upload your LandRvolumes.csv file",
+            '#description' =>
+                'SubjID must match those in covariates.csv and there must be be no empty cell. Max file size is ' .
+                $max_file_size . ' bytes',
+            '#progress_indicator' => "bar",
+            '#required' => TRUE,
+            '#type' => "managed_file",
+            '#upload_location' => $EBD_PRIVATE_URI_PREFIX . $user->uid . "/" .
+                $timestamp . "/",
+            '#upload_validators' => array (
+                "file_validate_extensions" => array ( "csv" ),
+                'file_validate_size' => array ( $max_file_size ) ),
+        );
+    }
+
+    $form['submit'] = array (
+        '#type' => 'submit',
+        '#value' => t ( 'Next' ),
+    );
+
+    return ( $form );
+}
+
+
+function ebd_upload_multipage_form_submit ( $form, &$form_state )
+{
+    global $EBD_DEBUG_FILE;
+    global $EBD_UPLOAD_INFO;
+    global $EBD_UPLOAD_STEPS;
+
+    $debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    fwrite ( $debug, "entered ebd_upload_multipage_form_submit\n" );
+
+    $upload_info = array();
+
+    if ( ! empty ( $form_state[$EBD_UPLOAD_INFO] ) )
+        $upload_info = $form_state[$EBD_UPLOAD_INFO];
+    fwrite ( $debug, "upload_info step : " . print_r ( $upload_info['step'], TRUE ) . "\n" );
+    if ( $upload_info['step'] === $EBD_UPLOAD_STEPS[5] )
+    {
+        fwrite ( $debug, "save!\n" );
+        drupal_set_message ( 'To-do, save the upload info...', 'warning' );
+        $form_state['rebuild'] = FALSE;
+        $form_state['redirect'] = "node/14";
+    }
+    else
+        $form_state['rebuild'] = TRUE;
+    fwrite ( $debug, "form_state rebuild : " . print_r ( $form_state['rebuild'], TRUE ) . "\n" );
+}
+
+
+/**
+ * Validate the multi-page user upload forms
+ **/
+function ebd_upload_multipage_form_validate ( $form, &$form_state )
+{
+    global $EBD_DEBUG_FILE;
+    global $EBD_PRIVATE_URI_PREFIX;
+    global $EBD_UPLOAD_INFO;
+    global $EBD_UPLOAD_STEPS;
+
+    $debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    fwrite ( $debug, "entered ebd_upload_multipage_form_validate\n" );
+
+    drupal_get_messages();
+
+    $file = NULL;
+    $upload_info = array();
+    $values = $form_state['values'];
+    //fwrite ( $debug, "values : " . print_r ( $values, TRUE ) . "\n" );
+
+    if ( ! empty ( $form_state[$EBD_UPLOAD_INFO] ) )
+        $upload_info = $form_state[$EBD_UPLOAD_INFO];
+    //fwrite ( $debug, "upload_info : " . print_r ( $upload_info, TRUE ) . "\n" );
+
+    if ( empty ( $upload_info['step'] ) ||
+        $upload_info['step'] == $EBD_UPLOAD_STEPS[1] )
+    {
+        $upload_info['timestamp'] = $values['timestamp'];
+
+        if ( empty ( $values['covariates_file'] ) )
+        {
+            form_set_error ( "Upload file missing!" );
+            return;
+        }
+
+        $file = file_load ( $values['covariates_file'] );
+        //fwrite ( $debug, "file : " . print_r ( $file, TRUE ) . "\n" );
+
+        $result = ebd_covariates_check ( $file );
+        //fwrite ( $debug, "result : " . print_r ( $result, TRUE ) . "\n" );
+
+        if ( $result == NULL )
+            form_set_error ( "covariates_file",
+                "Error in covariates.csv!  Please fix and try again" );
+        else
+        {
+            $upload_info['covariates'] = array ( "file" => $file,
+                "entries" => $result['entries'],
+                "subjects" => $result['subjects'] );
+            $upload_info['step'] = $EBD_UPLOAD_STEPS[2];
+        }
+    }
+
+    else if ( $upload_info['step'] == $EBD_UPLOAD_STEPS[2] )
+    {
+        if ( empty ( $values['surfavg_file'] ) )
+        {
+            form_set_error ( "Upload file missing!" );
+            return;
+        }
+
+        $file = file_load ( $values['surfavg_file'] );
+        //fwrite ( $debug, "file : " . print_r ( $file, TRUE ) . "\n" );
+
+        $result = ebd_upload_check ( $upload_info, $file );
+        //fwrite ( $debug, "result : " . print_r ( $result, TRUE ) . "\n" );
+
+        if ( $result === FALSE )
+            form_set_error ( "surfavg_file",
+                "Error in CorticalMeasuresENIGMA_SurfAvg.csv!  Please fix and try again" );
+        else
+        {
+            $upload_info['surfavg'] = array ( "file" => $file );
+            $upload_info['step'] = $EBD_UPLOAD_STEPS[3];
+        }
+    }
+
+    else if ( $upload_info['step'] == $EBD_UPLOAD_STEPS[3] )
+    {
+        if ( empty ( $values['thickavg_file'] ) )
+        {
+            form_set_error ( "Upload file missing!" );
+            return;
+        }
+
+        $file = file_load ( $values['thickavg_file'] );
+        //fwrite ( $debug, "thickavg_file : " . print_r ( $file, TRUE ) . "\n" );
+
+        $result = ebd_upload_check ( $upload_info, $file );
+        //fwrite ( $debug, "result : " . print_r ( $result, TRUE ) . "\n" );
+
+        if ( $result === FALSE )
+            form_set_error ( "thickavg_file",
+                "Error in CorticalMeasuresENIGMA_ThickAvg.csv!  Please fix and try again" );
+        else
+        {
+            $upload_info['thickavg'] = array ( "file" => $file );
+            $upload_info['step'] = $EBD_UPLOAD_STEPS[4];
+        }
+    }
+
+    else if ( $upload_info['step'] == $EBD_UPLOAD_STEPS[4] )
+    {
+        if ( empty ( $values['volumes_file'] ) )
+        {
+            form_set_error ( "Upload file missing!" );
+            return;
+        }
+
+        $file = file_load ( $values['volumes_file'] );
+        //fwrite ( $debug, "file : " . print_r ( $file, TRUE ) . "\n" );
+
+        $result = ebd_upload_check ( $upload_info, $file );
+        //fwrite ( $debug, "result : " . print_r ( $result, TRUE ) . "\n" );
+
+        if ( $result === FALSE )
+            form_set_error ( "volumes_file",
+                "Error in LandRvolumes.csv!  Please fix and try again" );
+        else
+        {
+            $upload_info['volumes'] = array ( "file" => $file );
+            $upload_info['step'] = $EBD_UPLOAD_STEPS[5];
+        }
+    }
+    //fwrite ( $debug, "upload_info : " . print_r ( $upload_info, TRUE ) . "\n" );
+
+    $form_state[$EBD_UPLOAD_INFO] = $upload_info;
+}
+
+
+/**
+ * Create the array for the given value which can be used to set a node
+ * object's field
+ * @param value - a value to set
+ * @return FALSE if argument is empty; otherwise returns
+ *      array ( LANGUAGE_NONE => array ( 'value' => $value ) )
+ **/
+function ebd_value_field_create ( $value )
+{
+    // Do not use empty to test as 0 will fail
+    if ( isset ( $value ) )
+      return ( array ( LANGUAGE_NONE =>
+          array ( array ( 'value' => $value ) ) ) );
+    else
+        return FALSE;
+}
+
+
