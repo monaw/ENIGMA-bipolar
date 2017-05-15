@@ -42,6 +42,15 @@ $EBD_PRIVATE_URI_PREFIX = "private://csv/";
 global $EBD_UPLOAD_INFO;
 $EBD_UPLOAD_INFO = "ebd_upload_info";
 
+global $EBD_UPLOAD_NEXT_BUTTON;
+$EBD_UPLOAD_NEXT_BUTTON = "Next -->";
+
+global $EBD_UPLOAD_PREVIOUS_BUTTON;
+$EBD_UPLOAD_PREVIOUS_BUTTON = "<-- Previous";
+
+global $EBD_UPLOAD_PROCEED_BUTTON;
+$EBD_UPLOAD_PROCEED_BUTTON = "Proceed with upload anyway -->";
+
 global $EBD_UPLOAD_STEPS;
 $EBD_UPLOAD_STEPS = array ( 1 => "covariates", 2 => "SurfAvg", 3 => "ThickAvg",
     4 => "volumes", 5 => "save" );
@@ -82,7 +91,9 @@ function ebd_agreement_create_node ( $values )
 
 
 /**
- * Create the user agreement form
+ * Create the user agreement form.  If there is a login redirect to reset user
+ * password, then will redirect there and add destination to return to this
+ * form.
  **/
 function ebd_agreement_form ( $form, &$form_state )
 {
@@ -94,7 +105,6 @@ function ebd_agreement_form ( $form, &$form_state )
 
     //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
     //fwrite ( $debug, "entered ebd_agreement_form\n" );
-
     $userx = user_load ( $user->uid );
     //fwrite ( $debug, "userx : " . print_r ( $userx, TRUE ) . "\n" );
 
@@ -304,8 +314,8 @@ function ebd_covariates_check ( $file )
     global $EBD_DEBUG_FILE;
     global $EBD_PRIVATE_URI_PREFIX;
 
-    $debug = fopen ( $EBD_DEBUG_FILE, "a" );
-    fwrite ( $debug, "entered ebd_covariates_check\n" );
+    //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    //fwrite ( $debug, "entered ebd_covariates_check\n" );
 
     $data = NULL;
 
@@ -423,10 +433,14 @@ function ebd_covariates_check ( $file )
         }
 
         $entry = array();
-        $entry[$subjid_index] = $line[$subjid_index];
-        $entry[$dx_index] = $line[$dx_index];
-        $entry[$age_index] = $line[$age_index];
-        $entry[$gender_index] = $line[$gender_index];
+        //$entry[$subjid_index] = $line[$subjid_index];
+        //$entry[$dx_index] = $line[$dx_index];
+        //$entry[$age_index] = $line[$age_index];
+        //$entry[$gender_index] = $line[$gender_index];
+        $entry['subjid'] = $line[$subjid_index];
+        $entry['dx'] = $line[$dx_index];
+        $entry['age'] = $line[$age_index];
+        $entry['gender'] = $line[$gender_index];
         $subjects[] = $line[$subjid_index];
 
         if ( ! empty ( $sites ) )
@@ -450,6 +464,22 @@ function ebd_covariates_check ( $file )
         $data = NULL;
 
     return ( $data );
+}
+
+function ebd_file_element_process ( $element, &$form_state, $form )
+{
+    global $EBD_DEBUG_FILE;
+    global $EBD_PRIVATE_URI_PREFIX;
+
+    //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    //fwrite ( $debug, "entered ebd_file_element_process\n" );
+    //fwrite ( $debug, "element 1 : " . print_r ( $element, TRUE ) . "\n" );
+
+    $element = file_managed_file_process($element, $form_state, $form);
+    $element['upload_button']['#access'] = FALSE;
+    //fwrite ( $debug, "element 2 : " . print_r ( $element, TRUE ) . "\n" );
+
+    return ( $element );
 }
 
 
@@ -495,20 +525,24 @@ function ebd_permission()
 
 /**
  * Check the given file.  Will display error if found and return 0.
- * @return TRUE if file is ok, FALSE otherwise
+ * Important: For drupal_set_message() to actual get displayed from this
+ *      function, the validate function MUST issue form_set_error()!
+ * @return 0 if the file is ok, 1 if missing subject(s), 2 if other problem
  **/ 
 function ebd_upload_check ( $info, $file )
 {
     global $EBD_DEBUG_FILE;
     global $EBD_PRIVATE_URI_PREFIX;
 
-    $debug = fopen ( $EBD_DEBUG_FILE, "a" );
-    fwrite ( $debug, "entered ebd_upload_check\n" );
+    //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    //fwrite ( $debug, "entered ebd_upload_check\n" );
 
-    $answer = FALSE;
+    $OK = 0;
+    $MISSING_SUBJECT = 1;
+    $PROBLEM = 2;
 
     if ( empty ( $info ) || empty ( $file ) )
-        return ( $answer );
+        return ( $PROBLEM );
     //fwrite ( $debug, "info : " . print_r ( $info, TRUE ) . "\n" );
 
     $file_handle = fopen ( $file->uri, "r" );
@@ -535,11 +569,10 @@ function ebd_upload_check ( $info, $file )
     if ( $subjid_index == -1 )
     {
         drupal_set_message ( "No SubjID column found!", 'error', FALSE );
-        return ( $answer );
+        return ( $PROBLEM );
     }
 
     $cont = TRUE;
-    //$answer = array();
     $line_counter = 2;
     $subjects = $info['covariates']['subjects'];
 
@@ -555,6 +588,7 @@ function ebd_upload_check ( $info, $file )
             $cont = FALSE;
             break;
         } 
+
         else
         {
             $subjectID = $line[$subjid_index];
@@ -563,6 +597,7 @@ function ebd_upload_check ( $info, $file )
 
             if ( $key === FALSE )
             {
+                //fwrite ( $debug, "missing key : " . print_r ( $key, TRUE ) . "\n" );
                 drupal_set_message ( 'Invalid SubjID "' . $subjectID .
                     '" on line ' . $line_counter .
                     " - SubjID does not exists in covariates.csv!", 'error' );
@@ -596,7 +631,10 @@ function ebd_upload_check ( $info, $file )
     //fwrite ( $debug, "cont : " . print_r ( $cont, TRUE ) . "\n" );
 
     //fwrite ( $debug, "subjects : " . print_r ( $subjects, TRUE ) . "\n" );
-    if ( $cont == TRUE && ! empty ( $subjects ) )
+    if ( $cont == FALSE )
+        return ( $PROBLEM );
+
+    else if ( $cont == TRUE && ! empty ( $subjects ) )
     {
         $num_subjects = count ( $subjects );
         $message = "";
@@ -606,17 +644,12 @@ function ebd_upload_check ( $info, $file )
         else
             $message = $num_subjects . " subjects are ";
 
-        drupal_set_message ( $message . 'missing from your file: ' .
-            implode ( ',', $subjects ), 'error' );
-        $cont = FALSE;
+        drupal_set_message ( $message . 'missing from your current file: ' .
+            implode ( ',', $subjects ), 'warning' );
+        return ( $MISSING_SUBJECT );
     }
-
-    if ( ! $cont )
-        $answer = FALSE;
     else
-        $answer = TRUE;
-
-    return ( $answer );
+        return ( $OK );
 }
 
 
@@ -629,12 +662,15 @@ function ebd_upload_multipage_form ( $form, &$form_state )
     global $EBD_DEBUG_FILE;
     global $EBD_PRIVATE_URI_PREFIX;
     global $EBD_UPLOAD_INFO;
+    global $EBD_UPLOAD_NEXT_BUTTON;
+    global $EBD_UPLOAD_PREVIOUS_BUTTON;
+    global $EBD_UPLOAD_PROCEED_BUTTON;
     global $EBD_UPLOAD_STEPS;
 
-    $debug = fopen ( $EBD_DEBUG_FILE, "a" );
-    fwrite ( $debug, "entered ebd_upload_multipage_form\n" );
+    //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    //fwrite ( $debug, "entered ebd_upload_multipage_form\n" );
     //fwrite ( $debug, "form : " . print_r ( $form, TRUE ) . "\n" );
-    fwrite ( $debug, "form_state rebuild : " . print_r ( $form_state['rebuild'], TRUE ) . "\n" );
+    //fwrite ( $debug, "form_state values : " . print_r ( $form_state['values'], TRUE ) . "\n" );
 
     $description = "";
     $max_file_size = file_upload_max_size();
@@ -657,7 +693,7 @@ function ebd_upload_multipage_form ( $form, &$form_state )
 
     if ( ! empty ( $upload_info['step'] ) )
         $step = $upload_info['step'];
-    fwrite ( $debug, "step : " . print_r ( $step, TRUE ) . "\n" );
+    //fwrite ( $debug, "step : " . print_r ( $step, TRUE ) . "\n" );
 
     // Create the form
     $form = array();
@@ -673,7 +709,7 @@ function ebd_upload_multipage_form ( $form, &$form_state )
             '#title' => 'Step 1. Upload your covariates.csv file',
             '#description' =>
                 'The file must contain at least SubjID, Dx, Age and Sex columns; Site# column(s) are optional. Column names are case-insensitive but must be spelled as noted.  Max file size is ' .
-                $max_file_size . ' bytes',
+                $max_file_size . ' bytes.',
             '#progress_indicator' => "bar",
             '#required' => TRUE,
             '#type' => "managed_file",
@@ -682,7 +718,12 @@ function ebd_upload_multipage_form ( $form, &$form_state )
             '#upload_validators' => array (
                 "file_validate_extensions" => array ( "csv" ),
                 'file_validate_size' => array ( $max_file_size ) ),
+            '#process' => array ( 'ebd_file_element_process' ),
         );
+
+        if ( isset ( $upload_info['covariates']['file']->fid ) )
+            $form['covariates_file']['#default_value'] =
+                $upload_info['covariates']['file']->fid;
     }
 
     else if ( $step === $EBD_UPLOAD_STEPS[2] )
@@ -695,16 +736,21 @@ function ebd_upload_multipage_form ( $form, &$form_state )
                 "Step 2. Upload your CorticalMeasuresENIGMA_SurfAvg.csv file",
             '#description' =>
                 'SubjID must match those in covariates.csv and there must be be no empty cell. Max file size is ' .
-                $max_file_size . ' bytes',
+                $max_file_size . ' bytes.',
             '#progress_indicator' => "bar",
-            '#required' => TRUE,
+            //'#required' => TRUE,
             '#type' => "managed_file",
             '#upload_location' => $EBD_PRIVATE_URI_PREFIX . $user->uid . "/" .
                 $timestamp . "/",
             '#upload_validators' => array (
                 "file_validate_extensions" => array ( "csv" ),
                 'file_validate_size' => array ( $max_file_size ) ),
+            '#process' => array ( 'ebd_file_element_process' ),
         );
+    
+        if ( isset ( $upload_info['surfavg']['file']->fid ) )
+            $form['surfavg_file']['#default_value'] =
+                $upload_info['surfavg']['file']->fid;
     }
 
     else if ( $step === $EBD_UPLOAD_STEPS[3] )
@@ -717,16 +763,21 @@ function ebd_upload_multipage_form ( $form, &$form_state )
                 "Step 3. Upload your CorticalMeasuresENIGMA_ThickAvg.csv file",
             '#description' =>
                 'SubjID must match those in covariates.csv and there must be be no empty cell. Max file size is ' .
-                $max_file_size . ' bytes',
+                $max_file_size . ' bytes.',
             '#progress_indicator' => "bar",
-            '#required' => TRUE,
+            //'#required' => TRUE,
             '#type' => "managed_file",
             '#upload_location' => $EBD_PRIVATE_URI_PREFIX . $user->uid . "/" .
                 $timestamp . "/",
             '#upload_validators' => array (
                 "file_validate_extensions" => array ( "csv" ),
                 'file_validate_size' => array ( $max_file_size ) ),
+            '#process' => array ( 'ebd_file_element_process' ),
         );
+
+        if ( isset ( $upload_info['thickavg']['file']->fid ) )
+            $form['thickavg_file']['#default_value'] =
+                $upload_info['thickavg']['file']->fid;
     }
 
     else if ( $step === $EBD_UPLOAD_STEPS[4] )
@@ -739,51 +790,98 @@ function ebd_upload_multipage_form ( $form, &$form_state )
                 "Step 4. Upload your LandRvolumes.csv file",
             '#description' =>
                 'SubjID must match those in covariates.csv and there must be be no empty cell. Max file size is ' .
-                $max_file_size . ' bytes',
+                $max_file_size . ' bytes.',
             '#progress_indicator' => "bar",
-            '#required' => TRUE,
+            //'#required' => TRUE,
             '#type' => "managed_file",
             '#upload_location' => $EBD_PRIVATE_URI_PREFIX . $user->uid . "/" .
                 $timestamp . "/",
             '#upload_validators' => array (
                 "file_validate_extensions" => array ( "csv" ),
                 'file_validate_size' => array ( $max_file_size ) ),
+            '#process' => array ( 'ebd_file_element_process' ),
         );
+
+        if ( isset ( $upload_info['volumes']['file']->fid ) )
+            $form['volumes_file']['#default_value'] =
+                $upload_info['volumes']['file']->fid;
     }
 
-    $form['submit'] = array (
+    $form['prev'] = array ( '#type' => 'submit',
+        '#value' => t ( $EBD_UPLOAD_PREVIOUS_BUTTON ) );
+
+    $form['bypass'] = array ( '#type' => 'hidden', '#value' => 0 );
+    $form['next'] = array (
         '#type' => 'submit',
-        '#value' => t ( 'Next' ),
+        '#value' => t ( $EBD_UPLOAD_NEXT_BUTTON ),
+        '#states' => array (
+            'visible' =>
+                array ( ':input[name="bypass"]' => array ( 'value' => '0' ) ) ),
     );
+    $form['proceed'] = array (
+        '#type' => 'submit',
+        '#value' => t ( $EBD_UPLOAD_PROCEED_BUTTON ),
+        '#states' => array (
+            'visible' =>
+                array ( ':input[name="bypass"]' => array ( 'value' => '1' ) ) ),
+    );
+
+    $form['cancel'] = array ( '#type' => 'submit', '#value' => t ( 'Cancel' ) );
+
+    if ( $step === $EBD_UPLOAD_STEPS[1] )
+    {
+        $form['prev']['#disabled'] = TRUE;
+        $form['cancel']['#disabled'] = TRUE;
+    }
+    //fwrite ( $debug, "form : " . print_r ( $form, TRUE ) . "\n" );
 
     return ( $form );
 }
 
 
+/**
+ * Implmented hook_submit
+ **/
 function ebd_upload_multipage_form_submit ( $form, &$form_state )
 {
     global $EBD_DEBUG_FILE;
     global $EBD_UPLOAD_INFO;
     global $EBD_UPLOAD_STEPS;
 
-    $debug = fopen ( $EBD_DEBUG_FILE, "a" );
-    fwrite ( $debug, "entered ebd_upload_multipage_form_submit\n" );
+    //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    //fwrite ( $debug, "entered ebd_upload_multipage_form_submit\n" );
+    $upload_info = $form_state[$EBD_UPLOAD_INFO];
+    //fwrite ( $debug, "upload_info : " . print_r ( $upload_info, TRUE ) . "\n" );
+    $values = $form_state['values'];
+    //fwrite ( $debug, "values : " . print_r ( $values, TRUE ) . "\n" );
 
-    $upload_info = array();
-
-    if ( ! empty ( $form_state[$EBD_UPLOAD_INFO] ) )
-        $upload_info = $form_state[$EBD_UPLOAD_INFO];
-    fwrite ( $debug, "upload_info step : " . print_r ( $upload_info['step'], TRUE ) . "\n" );
-    if ( $upload_info['step'] === $EBD_UPLOAD_STEPS[5] )
+    if ( $values['op'] === "Cancel" )
     {
-        fwrite ( $debug, "save!\n" );
-        drupal_set_message ( 'To-do, save the upload info...', 'warning' );
+        drupal_set_message
+            ( "You've cancelled the upload and your files have been deleted.",
+            "warning" );
+        $form_state['rebuild'] = FALSE;
+        $form_state['redirect'] = "agreement";
+    }
+
+    else if ( $upload_info['step'] === $EBD_UPLOAD_STEPS[5] )
+    {
         $form_state['rebuild'] = FALSE;
         $form_state['redirect'] = "node/14";
+        //fwrite ( $debug, "upload_info : " . print_r ( $upload_info, TRUE ) . "\n" );
+
+        if ( ebd_upload_save ( $upload_info ) === FALSE )
+            drupal_set_message
+                ( 'Error in saving upload!  Please notify administrator.',
+                'error' );
+        else
+            drupal_set_message
+                ( 'Your upload has been successfully saved.  Thank you!  You may now logout.' );
     }
+
     else
         $form_state['rebuild'] = TRUE;
-    fwrite ( $debug, "form_state rebuild : " . print_r ( $form_state['rebuild'], TRUE ) . "\n" );
+    //fwrite ( $debug, "form_state rebuild : " . print_r ( $form_state['rebuild'], TRUE ) . "\n" );
 }
 
 
@@ -795,10 +893,14 @@ function ebd_upload_multipage_form_validate ( $form, &$form_state )
     global $EBD_DEBUG_FILE;
     global $EBD_PRIVATE_URI_PREFIX;
     global $EBD_UPLOAD_INFO;
+    global $EBD_UPLOAD_NEXT_BUTTON;
+    global $EBD_UPLOAD_PREVIOUS_BUTTON;
+    global $EBD_UPLOAD_PROCEED_BUTTON;
     global $EBD_UPLOAD_STEPS;
 
-    $debug = fopen ( $EBD_DEBUG_FILE, "a" );
-    fwrite ( $debug, "entered ebd_upload_multipage_form_validate\n" );
+    //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    //fwrite ( $debug, "entered ebd_upload_multipage_form_validate\n" );
+    //fwrite ( $debug, "form_state : " . print_r ( $form_state, TRUE ) . "\n" );
 
     drupal_get_messages();
 
@@ -816,11 +918,13 @@ function ebd_upload_multipage_form_validate ( $form, &$form_state )
     {
         $upload_info['timestamp'] = $values['timestamp'];
 
+        /* Not needed since first file is set to be required...
         if ( empty ( $values['covariates_file'] ) )
         {
             form_set_error ( "Upload file missing!" );
             return;
         }
+        */
 
         $file = file_load ( $values['covariates_file'] );
         //fwrite ( $debug, "file : " . print_r ( $file, TRUE ) . "\n" );
@@ -830,7 +934,7 @@ function ebd_upload_multipage_form_validate ( $form, &$form_state )
 
         if ( $result == NULL )
             form_set_error ( "covariates_file",
-                "Error in covariates.csv!  Please fix and try again" );
+                "Error in covariates.csv!  Please fix and try again." );
         else
         {
             $upload_info['covariates'] = array ( "file" => $file,
@@ -842,78 +946,222 @@ function ebd_upload_multipage_form_validate ( $form, &$form_state )
 
     else if ( $upload_info['step'] == $EBD_UPLOAD_STEPS[2] )
     {
-        if ( empty ( $values['surfavg_file'] ) )
+        if ( $values['op'] === $EBD_UPLOAD_PREVIOUS_BUTTON )
+            $upload_info['step'] = $EBD_UPLOAD_STEPS[1];
+
+        else if ( $values['op'] === $EBD_UPLOAD_NEXT_BUTTON )
         {
-            form_set_error ( "Upload file missing!" );
-            return;
+            if ( empty ( $values['surfavg_file'] ) )
+            {
+                form_set_error ( "surfavg_file", "Upload file missing!" );
+                return;
+            }
+
+            $file = file_load ( $values['surfavg_file'] );
+            //fwrite ( $debug, "file : " . print_r ( $file, TRUE ) . "\n" );
+
+            $result = ebd_upload_check ( $upload_info, $file );
+            //fwrite ( $debug, "ebd_upload_check : " . print_r ( $result, TRUE ) . "\n" );
+
+            if ( $result === 0 )
+            {
+                $upload_info['surfavg'] = array ( "file" => $file );
+                $upload_info['step'] = $EBD_UPLOAD_STEPS[3];
+            }
+            else if ( $result === 1 )
+            {
+                $upload_info['surfavg'] = array ( "file" => $file );
+                $form_state['complete form']['bypass']['#value'] = 1;
+                form_set_error ( "surfavg_file",
+                    'If the missing subject is intentional (perhaps because of unsalvageable data for one type of imaging data, but adequate data for other types), please click on the "Proceed with upload anyway" button below. If this is in error, please reconcile the subject numbers in all of your files before uploading.' );
+            }
+            else if ( $result === 2 )
+                form_set_error ( "surfavg_file",
+                    "Error in CorticalMeasuresENIGMA_SurfAvg.csv!  Please fix and try again." );
         }
 
-        $file = file_load ( $values['surfavg_file'] );
-        //fwrite ( $debug, "file : " . print_r ( $file, TRUE ) . "\n" );
-
-        $result = ebd_upload_check ( $upload_info, $file );
-        //fwrite ( $debug, "result : " . print_r ( $result, TRUE ) . "\n" );
-
-        if ( $result === FALSE )
-            form_set_error ( "surfavg_file",
-                "Error in CorticalMeasuresENIGMA_SurfAvg.csv!  Please fix and try again" );
-        else
-        {
-            $upload_info['surfavg'] = array ( "file" => $file );
+        else if ( $values['op'] === $EBD_UPLOAD_PROCEED_BUTTON )
             $upload_info['step'] = $EBD_UPLOAD_STEPS[3];
-        }
     }
 
     else if ( $upload_info['step'] == $EBD_UPLOAD_STEPS[3] )
     {
-        if ( empty ( $values['thickavg_file'] ) )
+        if ( $values['op'] === $EBD_UPLOAD_PREVIOUS_BUTTON )
+            $upload_info['step'] = $EBD_UPLOAD_STEPS[2];
+
+        else if ( $values['op'] === $EBD_UPLOAD_NEXT_BUTTON )
         {
-            form_set_error ( "Upload file missing!" );
-            return;
+            if ( empty ( $values['thickavg_file'] ) )
+            {
+                form_set_error ( "thickavg_file", "Upload file missing!" );
+                return;
+            }
+
+            $file = file_load ( $values['thickavg_file'] );
+            //fwrite ( $debug, "thickavg_file : " . print_r ( $file, TRUE ) . "\n" );
+
+            $result = ebd_upload_check ( $upload_info, $file );
+            //fwrite ( $debug, "result : " . print_r ( $result, TRUE ) . "\n" );
+
+            if ( $result === 0 )
+            {
+                $upload_info['thickavg'] = array ( "file" => $file );
+                $upload_info['step'] = $EBD_UPLOAD_STEPS[4];
+            }
+            else if ( $result === 1 )
+            {
+                $form_state['complete form']['bypass']['#value'] = 1;
+                $upload_info['thickavg'] = array ( "file" => $file );
+                form_set_error ( "thickavg_file",
+                    'If the missing subject is intentional (perhaps because of unsalvageable data for one type of imaging data, but adequate data for other types), please click on the "Proceed with upload anyway" button below. If this is in error, please reconcile the subject numbers in all of your files before uploading.' );
+            }
+            else if ( $result === 2 )
+                form_set_error ( "thickavg_file",
+                    "Error in CorticalMeasuresENIGMA_ThickAvg.csv!  Please fix and try again." );
         }
 
-        $file = file_load ( $values['thickavg_file'] );
-        //fwrite ( $debug, "thickavg_file : " . print_r ( $file, TRUE ) . "\n" );
-
-        $result = ebd_upload_check ( $upload_info, $file );
-        //fwrite ( $debug, "result : " . print_r ( $result, TRUE ) . "\n" );
-
-        if ( $result === FALSE )
-            form_set_error ( "thickavg_file",
-                "Error in CorticalMeasuresENIGMA_ThickAvg.csv!  Please fix and try again" );
-        else
-        {
-            $upload_info['thickavg'] = array ( "file" => $file );
+        else if ( $values['op'] === $EBD_UPLOAD_PROCEED_BUTTON )
             $upload_info['step'] = $EBD_UPLOAD_STEPS[4];
-        }
     }
 
     else if ( $upload_info['step'] == $EBD_UPLOAD_STEPS[4] )
     {
-        if ( empty ( $values['volumes_file'] ) )
+        if ( $values['op'] === $EBD_UPLOAD_PREVIOUS_BUTTON )
+            $upload_info['step'] = $EBD_UPLOAD_STEPS[3];
+
+        else if ( $values['op'] === $EBD_UPLOAD_NEXT_BUTTON )
         {
-            form_set_error ( "Upload file missing!" );
-            return;
+            if ( empty ( $values['volumes_file'] ) )
+            {
+                form_set_error ( "volumes_file", "Upload file missing!" );
+                return;
+            }
+
+            $file = file_load ( $values['volumes_file'] );
+            //fwrite ( $debug, "file : " . print_r ( $file, TRUE ) . "\n" );
+
+            $result = ebd_upload_check ( $upload_info, $file );
+            //fwrite ( $debug, "result : " . print_r ( $result, TRUE ) . "\n" );
+
+            if ( $result === 0 )
+            {
+                $upload_info['volumes'] = array ( "file" => $file );
+                $upload_info['step'] = $EBD_UPLOAD_STEPS[5];
+            }
+            else if ( $result === 1 )
+            {
+                $upload_info['volumes'] = array ( "file" => $file );
+                $form_state['complete form']['bypass']['#value'] = 1;
+                form_set_error ( "volumes_file",
+                    'If the missing subject is intentional (perhaps because of unsalvageable data for one type of imaging data, but adequate data for other types), please click on the "Proceed with upload anyway" button below. If this is in error, please reconcile the subject numbers in all of your files before uploading.' );
+            }
+            else if ( $result === 2 )
+                form_set_error ( "volumes_file",
+                    "Error in LandRvolumes.csv!  Please fix and try again." );
         }
 
-        $file = file_load ( $values['volumes_file'] );
-        //fwrite ( $debug, "file : " . print_r ( $file, TRUE ) . "\n" );
-
-        $result = ebd_upload_check ( $upload_info, $file );
-        //fwrite ( $debug, "result : " . print_r ( $result, TRUE ) . "\n" );
-
-        if ( $result === FALSE )
-            form_set_error ( "volumes_file",
-                "Error in LandRvolumes.csv!  Please fix and try again" );
-        else
-        {
-            $upload_info['volumes'] = array ( "file" => $file );
+        else if ( $values['op'] === $EBD_UPLOAD_PROCEED_BUTTON )
             $upload_info['step'] = $EBD_UPLOAD_STEPS[5];
-        }
     }
-    //fwrite ( $debug, "upload_info : " . print_r ( $upload_info, TRUE ) . "\n" );
+    //fwrite ( $debug, "new upload_info : " . print_r ( $upload_info, TRUE ) . "\n" );
 
     $form_state[$EBD_UPLOAD_INFO] = $upload_info;
+}
+
+
+function ebd_upload_save ( $info )
+{
+    global $user;
+    global $EBD_DEBUG_FILE;
+
+    //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    //fwrite ( $debug, "entered ebd_upload_save\n" );
+    //fwrite ( $debug, "info : " . print_r ( $info, TRUE ) . "\n" );
+
+    // Make sure 4 files are present
+    if ( ! isset ( $info['covariates']['file']->fid ) ||
+        empty ( $info['covariates']['file']->fid ) ||
+        ! isset ( $info['surfavg']['file']->fid ) ||
+        empty ( $info['surfavg']['file']->fid ) ||
+        ! isset ( $info['thickavg']['file']->fid ) ||
+        empty ( $info['thickavg']['file']->fid ) ||
+        ! isset ( $info['volumes']['file']->fid ) ||
+        empty ( $info['volumes']['file']->fid ) )
+        return ( FALSE );
+   
+    // Must set file's display or else PDOException when saving node
+    $info['covariates']['file']->display = 1;
+    $info['surfavg']['file']->display = 1;
+    $info['thickavg']['file']->display = 1;
+    $info['volumes']['file']->display = 1;
+
+    // Gather data stats
+    $age_max = 0;
+    $age_min = 1000;
+    $age_total = 0;
+    $num_females = 0;
+    $num_males = 0;
+    $num_sites = count ( $info['covariates']['entries'][0] ) - 4;
+    $num_subjects = count ( $info['covariates']['subjects'] );
+
+    foreach ( $info['covariates']['entries'] as $entry )
+    {
+        $age_total += $entry['age'];
+
+        if ( $entry['age'] > $age_max )
+            $age_max = $entry['age'];
+        else if ( $entry['age'] < $age_min )
+            $age_min = $entry['age'];
+
+        if ( $entry['gender'] == '1' )
+            $num_males++;
+        else if ( $entry['gender'] == '2' )
+            $num_females++;
+    }
+    $age_mean = $age_total / $num_subjects;
+    //fwrite ( $debug, "age_min : " . print_r ( $age_min, TRUE ) . "\n" );
+    //fwrite ( $debug, "age_mean : " . print_r ( $age_mean, TRUE ) . "\n" );
+    //fwrite ( $debug, "age_max : " . print_r ( $age_max, TRUE ) . "\n" );
+    //fwrite ( $debug, "age_total : " . print_r ( $age_total, TRUE ) . "\n" );
+    //fwrite ( $debug, "num_males : " . print_r ( $num_males, TRUE ) . "\n" );
+    //fwrite ( $debug, "num_females : " . print_r ( $num_females, TRUE ) . "\n" );
+    //fwrite ( $debug, "num_sites : " . print_r ( $num_sites, TRUE ) . "\n" );
+    //fwrite ( $debug, "num_subjects : " . print_r ( $num_subjects, TRUE ) . "\n" );
+
+    // Create the update node
+    $node = new stdClass();
+    $node->uid = $user->uid;
+    $node->type = "uploads";
+    $node->title = $info['timestamp'];
+    $node->is_new = TRUE;
+    $node->status = 1;
+    $node->field_upload_covariates_file = array ( LANGUAGE_NONE => array (
+        ( array ) $info['covariates']['file'] ) );
+    $node->field_upload_surface_file = array ( LANGUAGE_NONE => array (
+        ( array ) $info['surfavg']['file'] ) );
+    $node->field_upload_thickness_file = array ( LANGUAGE_NONE => array (
+        ( array ) $info['thickavg']['file'] ) );
+    $node->field_upload_volumes_file = array ( LANGUAGE_NONE => array (
+            ( array ) $info['volumes']['file'] ) );
+    $node->field_upload_num_subjects = array ( LANGUAGE_NONE => array (
+        array ( 'value' => $num_subjects ) ) );
+    $node->field_upload_num_sites = array ( LANGUAGE_NONE => array (
+        array ( 'value' => $num_sites ) ) );
+    $node->field_upload_age_min = array ( LANGUAGE_NONE => array (
+        array ( 'value' => $age_min ) ) );
+    $node->field_upload_age_mean = array ( LANGUAGE_NONE => array (
+        array ( 'value' => $age_mean ) ) );
+    $node->field_upload_age_max = array ( LANGUAGE_NONE => array (
+        array ( 'value' => $age_max ) ) );
+    $node->field_upload_num_male_subjects = array ( LANGUAGE_NONE => array (
+        array ( 'value' => $num_males ) ) );
+    $node->field_upload_num_female_subjects = array ( LANGUAGE_NONE => array (
+        array ( 'value' => $num_females ) ) );
+    //fwrite ( $debug, "node : " . print_r ( $node, TRUE ) . "\n" );
+
+    node_save ( $node );
+
+    return ( $node );
 }
 
 
