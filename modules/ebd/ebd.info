@@ -5,3 +5,4 @@ core = 7.x
 php = 5.5.9
 version = 7.x-0.1
 ;stylesheets[all][] = ebd.css
+dependencies[] = ctools
