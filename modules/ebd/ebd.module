@@ -330,6 +330,7 @@ function ebd_covariates_check ( $file )
     $gender_index = -1;
     $headers = fgetcsv ( $file_handle, 0, "," );
     //fwrite ( $debug, "headers : " . print_r ( $headers, TRUE ) . "\n" );
+    $missing_columns = array();
     $sites = array();
     $subjid_index = -1;
 
@@ -360,34 +361,30 @@ function ebd_covariates_check ( $file )
     //fwrite ( $debug, "sites : " . print_r ( $sites, TRUE ) . "\n" );
 
     // Check required columns' index
-    $cont = TRUE;
-
     if ( $subjid_index == -1 )
-    {
-        drupal_set_message ( "No SubjID column found!", 'error', FALSE );
-        $cont = FALSE;
-    }
+        $missing_columns[] = "SubjID";
 
     if ( $dx_index == -1 )
-    {
-        drupal_set_message ( "No Dx column found!", 'error', FALSE );
-        $cont = FALSE;
-    }
+        $missing_columns[] = "Dx";
 
     if ( $age_index == -1 )
-    {
-        drupal_set_message ( "No Age column found!", 'error', FALSE );
-        $cont = FALSE;
-    }
+        $missing_columns[] = "Age";
 
     if ( $gender_index == -1 )
-    {
-        drupal_set_message ( "No Sex column found!", 'error', FALSE );
-        $cont = FALSE;
-    }
+        $missing_columns[] = "Sex";
 
-    if ( ! $cont )
-        return ( $data );
+    if ( ! empty ( $missing_columns ) )
+    {
+        $message = "Error: missing required column";
+
+        if ( count ( $missing_columns ) > 1 )
+            $message .= "s";
+
+        drupal_set_message ( $message . " (" .
+            implode ( ", ", $missing_columns ) . ")!", "error" );
+
+        return ( null );
+    }
 
     $cont = TRUE;
     $data = array();
@@ -433,10 +430,6 @@ function ebd_covariates_check ( $file )
         }
 
         $entry = array();
-        //$entry[$subjid_index] = $line[$subjid_index];
-        //$entry[$dx_index] = $line[$dx_index];
-        //$entry[$age_index] = $line[$age_index];
-        //$entry[$gender_index] = $line[$gender_index];
         $entry['subjid'] = $line[$subjid_index];
         $entry['dx'] = $line[$dx_index];
         $entry['age'] = $line[$age_index];
@@ -466,6 +459,10 @@ function ebd_covariates_check ( $file )
     return ( $data );
 }
 
+
+/**
+ * Remove the unneeded upload button on the file upload forms
+ **/
 function ebd_file_element_process ( $element, &$form_state, $form )
 {
     global $EBD_DEBUG_FILE;
@@ -533,13 +530,17 @@ function ebd_upload_check ( $info, $file )
 {
     global $EBD_DEBUG_FILE;
     global $EBD_PRIVATE_URI_PREFIX;
+    global $EBD_UPLOAD_STEPS;
 
     //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
     //fwrite ( $debug, "entered ebd_upload_check\n" );
 
+    // Static return values
     $OK = 0;
     $MISSING_SUBJECT = 1;
     $PROBLEM = 2;
+
+    $retval = $OK;
 
     if ( empty ( $info ) || empty ( $file ) )
         return ( $PROBLEM );
@@ -547,10 +548,95 @@ function ebd_upload_check ( $info, $file )
 
     $file_handle = fopen ( $file->uri, "r" );
 
-    // First, check header
+    // First, check headers...
+    $extra_headers = array();
     $headers = fgetcsv ( $file_handle, 0, "," );
     //fwrite ( $debug, "headers : " . print_r ( $headers, TRUE ) . "\n" );
+    $lrvolumes_headers = array ( "SubjID", "LLatVent", "RLatVent", "Lthal",
+        "Rthal", "Lcaud", "Rcaud", "Lput", "Rput", "Lpal", "Rpal", "Lhippo",
+        "Rhippo", "Lamyg", "Ramyg", "Laccumb", "Raccumb", "ICV" );
     $subjid_index = -1;
+    $surfavg_headers = array ( "SubjID", "L_bankssts_surfavg",
+        "L_caudalanteriorcingulate_surfavg", "L_caudalmiddlefrontal_surfavg",
+        "L_cuneus_surfavg", "L_entorhinal_surfavg", "L_fusiform_surfavg",
+        "L_inferiorparietal_surfavg", "L_inferiortemporal_surfavg",
+        "L_isthmuscingulate_surfavg", "L_lateraloccipital_surfavg",
+        "L_lateralorbitofrontal_surfavg", "L_lingual_surfavg",
+        "L_medialorbitofrontal_surfavg", "L_middletemporal_surfavg",
+        "L_parahippocampal_surfavg", "L_paracentral_surfavg",
+        "L_parsopercularis_surfavg", "L_parsorbitalis_surfavg",
+        "L_parstriangularis_surfavg", "L_pericalcarine_surfavg",
+        "L_postcentral_surfavg", "L_posteriorcingulate_surfavg",
+        "L_precentral_surfavg", "L_precuneus_surfavg",
+        "L_rostralanteriorcingulate_surfavg", "L_rostralmiddlefrontal_surfavg",
+        "L_superiorfrontal_surfavg", "L_superiorparietal_surfavg",
+        "L_superiortemporal_surfavg", "L_supramarginal_surfavg",
+        "L_frontalpole_surfavg", "L_temporalpole_surfavg",
+        "L_transversetemporal_surfavg", "L_insula_surfavg",
+        "R_bankssts_surfavg", "R_caudalanteriorcingulate_surfavg",
+        "R_caudalmiddlefrontal_surfavg", "R_cuneus_surfavg",
+        "R_entorhinal_surfavg", "R_fusiform_surfavg",
+        "R_inferiorparietal_surfavg", "R_inferiortemporal_surfavg",
+        "R_isthmuscingulate_surfavg", "R_lateraloccipital_surfavg",
+        "R_lateralorbitofrontal_surfavg", "R_lingual_surfavg",
+        "R_medialorbitofrontal_surfavg", "R_middletemporal_surfavg",
+        "R_parahippocampal_surfavg", "R_paracentral_surfavg",
+        "R_parsopercularis_surfavg", "R_parsorbitalis_surfavg",
+        "R_parstriangularis_surfavg", "R_pericalcarine_surfavg",
+        "R_postcentral_surfavg", "R_posteriorcingulate_surfavg",
+        "R_precentral_surfavg", "R_precuneus_surfavg",
+        "R_rostralanteriorcingulate_surfavg", "R_rostralmiddlefrontal_surfavg",
+        "R_superiorfrontal_surfavg", "R_superiorparietal_surfavg",
+        "R_superiortemporal_surfavg", "R_supramarginal_surfavg",
+        "R_frontalpole_surfavg", "R_temporalpole_surfavg",
+        "R_transversetemporal_surfavg", "R_insula_surfavg", "LThickness",
+        "RThickness", "LSurfArea", "RSurfArea", "ICV" );
+    $target_headers = array();
+    $thickavg_headers = array ( "SubjID", "L_bankssts_thickavg",
+        "L_caudalanteriorcingulate_thickavg", "L_caudalmiddlefrontal_thickavg",
+        "L_cuneus_thickavg", "L_entorhinal_thickavg", "L_fusiform_thickavg",
+        "L_inferiorparietal_thickavg", "L_inferiortemporal_thickavg",
+        "L_isthmuscingulate_thickavg", "L_lateraloccipital_thickavg",
+        "L_lateralorbitofrontal_thickavg", "L_lingual_thickavg",
+        "L_medialorbitofrontal_thickavg", "L_middletemporal_thickavg",
+        "L_parahippocampal_thickavg", "L_paracentral_thickavg",
+        "L_parsopercularis_thickavg", "L_parsorbitalis_thickavg",
+        "L_parstriangularis_thickavg", "L_pericalcarine_thickavg",
+        "L_postcentral_thickavg", "L_posteriorcingulate_thickavg",
+        "L_precentral_thickavg", "L_precuneus_thickavg",
+        "L_rostralanteriorcingulate_thickavg",
+        "L_rostralmiddlefrontal_thickavg", "L_superiorfrontal_thickavg",
+        "L_superiorparietal_thickavg", "L_superiortemporal_thickavg",
+        "L_supramarginal_thickavg", "L_frontalpole_thickavg",
+        "L_temporalpole_thickavg", "L_transversetemporal_thickavg",
+        "L_insula_thickavg", "R_bankssts_thickavg",
+        "R_caudalanteriorcingulate_thickavg", "R_caudalmiddlefrontal_thickavg",
+        "R_cuneus_thickavg", "R_entorhinal_thickavg", "R_fusiform_thickavg",
+        "R_inferiorparietal_thickavg", "R_inferiortemporal_thickavg",
+        "R_isthmuscingulate_thickavg", "R_lateraloccipital_thickavg",
+        "R_lateralorbitofrontal_thickavg", "R_lingual_thickavg",
+        "R_medialorbitofrontal_thickavg", "R_middletemporal_thickavg",
+        "R_parahippocampal_thickavg", "R_paracentral_thickavg",
+        "R_parsopercularis_thickavg", "R_parsorbitalis_thickavg",
+        "R_parstriangularis_thickavg", "R_pericalcarine_thickavg",
+        "R_postcentral_thickavg", "R_posteriorcingulate_thickavg",
+        "R_precentral_thickavg", "R_precuneus_thickavg",
+        "R_rostralanteriorcingulate_thickavg",
+        "R_rostralmiddlefrontal_thickavg", "R_superiorfrontal_thickavg",
+        "R_superiorparietal_thickavg", "R_superiortemporal_thickavg",
+        "R_supramarginal_thickavg", "R_frontalpole_thickavg",
+        "R_temporalpole_thickavg", "R_transversetemporal_thickavg",
+        "R_insula_thickavg", "LThickness", "RThickness", "LSurfArea",
+        "RSurfArea", "ICV" );
+
+    if ( $info['step'] === $EBD_UPLOAD_STEPS[2] )
+        $target_headers = $surfavg_headers;
+    else if ( $info['step'] === $EBD_UPLOAD_STEPS[3] )
+        $target_headers = $thickavg_headers;
+    else if ( $info['step'] === $EBD_UPLOAD_STEPS[4] )
+        $target_headers = $lrvolumes_headers;
+
+    $tmp_headers = $target_headers;
 
     foreach ( $headers as $index => $header )
     {
@@ -558,98 +644,131 @@ function ebd_upload_check ( $info, $file )
         //fwrite ( $debug, "header : " . print_r ( $header, TRUE ) . "\n" );
 
         if ( strcasecmp ( $header, "SubjID" ) === 0 )
-        {
             $subjid_index = $index;
-            break;
-        }
+
+        $key = array_search ( $header, $tmp_headers );
+
+        if ( $key === FALSE )
+            $extra_headers[] = $header;
+        else
+            unset ( $tmp_headers[$key] );
     }
     //fwrite ( $debug, "subjid_index : " . print_r ( $subjid_index, TRUE ) . "\n" );
+    //fwrite ( $debug, "extra_headers : " . print_r ( $extra_headers, TRUE ) . "\n" );
+    //fwrite ( $debug, "tmp_headers : " . print_r ( $tmp_headers, TRUE ) . "\n" );
 
-    // Check required columns' index
+    // If no subjectID index, cannot continue!
     if ( $subjid_index == -1 )
     {
-        drupal_set_message ( "No SubjID column found!", 'error', FALSE );
+        drupal_set_message ( "Error: no SubjID column found!", 'error', FALSE );
         return ( $PROBLEM );
     }
 
-    $cont = TRUE;
+    if ( ! empty ( $tmp_headers ) )
+    {
+        $message = "Error: missing required column";
+
+        if ( count ( $tmp_headers ) > 1 )
+            $message .= "s";
+
+        drupal_set_message ( $message . " (" .
+            implode ( ", ", $tmp_headers ) . ")!", 'error' );
+        $retval = $PROBLEM;
+    }
+
+    if ( ! empty ( $extra_headers ) )
+    {
+        $message = "Error: extra column";
+
+        if ( count ( $extra_headers ) > 1 )
+            $message .= "s";
+
+        drupal_set_message ( $message . " (" .
+            implode ( ", ", $extra_headers ) . ") not allowed!", 'error' );
+        $retval = $PROBLEM;
+    }
+
+    $empty_values = array();
+    $extra_subjects = array();
     $line_counter = 2;
     $subjects = $info['covariates']['subjects'];
 
-    // Now check each line...
+    // Now check each data line...
     while ( ( $line = fgetcsv ( $file_handle, 0, "," ) ) != FALSE )
     {
         //fwrite ( $debug, "line : " . print_r ( $line, TRUE ) . "\n" );
 
-        if ( empty ( $line[$subjid_index] ) )
-        {
-            drupal_set_message ( "Missing SubjID on line " . $line_counter,
-                'error', FALSE );
-            $cont = FALSE;
-            break;
-        } 
+        $subjectID = $line[$subjid_index];
+        $key = array_search ( $subjectID, $subjects );
+        //fwrite ( $debug, "key : " . print_r ( $key, TRUE ) . "\n" );
 
+        if ( $key === FALSE )
+                $extra_subjects[] = $subjectID;
         else
         {
-            $subjectID = $line[$subjid_index];
-            $key = array_search ( $subjectID, $subjects );
-            //fwrite ( $debug, "key : " . print_r ( $key, TRUE ) . "\n" );
+            //fwrite ( $debug, "unsetting subject : " . print_r ( $subjectID, TRUE ) . "\n" );
+            unset ( $subjects[$key] );
 
-            if ( $key === FALSE )
+            foreach ( $line as $i => $value )
             {
-                //fwrite ( $debug, "missing key : " . print_r ( $key, TRUE ) . "\n" );
-                drupal_set_message ( 'Invalid SubjID "' . $subjectID .
-                    '" on line ' . $line_counter .
-                    " - SubjID does not exists in covariates.csv!", 'error' );
-                $cont = FALSE;
-                break;
-            }
-            else
-            {
-                //fwrite ( $debug, "unsetting subject : " . print_r ( $subjectID, TRUE ) . "\n" );
-                unset ( $subjects[$key] );
-
-                foreach ( $line as $i => $value )
-                {
-                    $column = ( int ) $i + 1;
-                    //fwrite ( $debug, "i : " . print_r ( $i, TRUE ) . "\n" );
-                    //fwrite ( $debug, "value : " . print_r ( $value, TRUE ) . "\n" );
-                    if ( empty ( $value ) )
-                    {
-                        //fwrite ( $debug, "empty value on line : " . print_r ( $line_counter, TRUE ) . "\n" );
-                        drupal_set_message ( 'Empty value for column ' .
-                            $column . ' on line ' . $line_counter, 'error' );
-                        $cont = FALSE;
-                        break 2;
-                    }
-                }
+                $column = ( int ) $i + 1;
+                //fwrite ( $debug, "i : " . print_r ( $i, TRUE ) . "\n" );
+                //fwrite ( $debug, "value : " . print_r ( $value, TRUE ) . "\n" );
+                if ( empty ( $value ) )
+                    $empty_values[] = "line " . $line_counter . " in column " .
+                        $target_headers[$i]; 
             }
         }
 
         $line_counter++;
     }
-    //fwrite ( $debug, "cont : " . print_r ( $cont, TRUE ) . "\n" );
+    //fwrite ( $debug, "extra_subjects : " . print_r ( $extra_subjects, TRUE ) . "\n" );
+    //fwrite ( $debug, "empty_values : " . print_r ( $empty_values, TRUE ) . "\n" );
 
-    //fwrite ( $debug, "subjects : " . print_r ( $subjects, TRUE ) . "\n" );
-    if ( $cont == FALSE )
-        return ( $PROBLEM );
+    if ( ! empty ( $extra_subjects ) )
+    {
+        $message = "Error: extra subject";
 
-    else if ( $cont == TRUE && ! empty ( $subjects ) )
+        if ( count ( $extra_subjects ) > 1 )
+            $message .= "s";
+
+        drupal_set_message ( $message . " (" .
+            implode ( ", ", $extra_subjects ) . ") not allowed!", "error" );
+
+        $retval = $PROBLEM;
+    }
+
+    if ( ! empty ( $empty_values ) )
+    {
+        $message = "Error: missing value"; 
+
+        if ( count ( $empty_values ) > 1 )
+            $message .= "s";
+
+        drupal_set_message ( $message . " (" .
+            implode ( ", ", $empty_values ) . ") not allowed!", "error" );
+
+        $retval = $PROBLEM;
+    }
+
+    if ( ! empty ( $subjects ) )
     {
         $num_subjects = count ( $subjects );
         $message = "";
 
         if ( $num_subjects == 1 )
-            $message = "The following subject is ";
+            $message = "Warning: the following subject is ";
         else
-            $message = $num_subjects . " subjects are ";
+            $message = "Warning: " . $num_subjects . " subjects are ";
 
-        drupal_set_message ( $message . 'missing from your current file: ' .
-            implode ( ',', $subjects ), 'warning' );
-        return ( $MISSING_SUBJECT );
+        drupal_set_message ( $message . 'missing (' .
+            implode ( ', ', $subjects ) . ")", 'warning' );
+
+        if ( $retval === $OK )
+            return ( $MISSING_SUBJECT );
     }
-    else
-        return ( $OK );
+
+    return ( $retval );
 }
 
 
@@ -698,7 +817,7 @@ function ebd_upload_multipage_form ( $form, &$form_state )
     // Create the form
     $form = array();
     $form["info"] = array ( '#markup' =>
-        '<div class=\"info\">This is a multi-step form to upload your 4 files one at a time</div>' );
+        '<div class=\"info\">This is a multi-step form to upload your 4 files one at a time.  As a reminder, the 4 files are: covariates.csv, CorticalMeasuresENIGMA_SurfAvg.csv, CorticalMeasuresENIGMA_ThickAvg.csv, and LandRvolumes.csv.  If you do not have all 4 files prepared, please log out and return later when you are ready.<br>The upload process will check for and alert you to: 1) missing data in any fields, 2) improper coding of variables (such as Dx or Sex), and 3) lack of correspondence of SubjIDs from one file to the next.<br><br></div>' );
 
     if ( $step === $EBD_UPLOAD_STEPS[1] )
     {
@@ -708,7 +827,7 @@ function ebd_upload_multipage_form ( $form, &$form_state )
         $form["covariates_file"] = array (
             '#title' => 'Step 1. Upload your covariates.csv file',
             '#description' =>
-                'The file must contain at least SubjID, Dx, Age and Sex columns; Site# column(s) are optional. Column names are case-insensitive but must be spelled as noted.  Max file size is ' .
+                'The file must contain at least SubjID, Dx, Age and Sex columns; Site# column(s) are optional. Column names are case-insensitive but must be spelled as noted.  Dx must be either 0 (control/comparison) or 1 (bipolar), Age must be greater than 0, Sex must be either 1 (males) or 2 (females). Max file size is ' .
                 $max_file_size . ' bytes.',
             '#progress_indicator' => "bar",
             '#required' => TRUE,
@@ -735,7 +854,7 @@ function ebd_upload_multipage_form ( $form, &$form_state )
             '#title' =>
                 "Step 2. Upload your CorticalMeasuresENIGMA_SurfAvg.csv file",
             '#description' =>
-                'SubjID must match those in covariates.csv and there must be be no empty cell. Max file size is ' .
+                'The values contained in the file should have been quality checked according to instructions <a href="http://enigma.ini.usc.edu/protocols/imaging-protocols/" target="enigma_qcp">here</a>.  Individual measures not passing QC should be indicated with NA in those cells of the .csv file. Max file size is ' .
                 $max_file_size . ' bytes.',
             '#progress_indicator' => "bar",
             //'#required' => TRUE,
@@ -929,23 +1048,28 @@ function ebd_upload_multipage_form_validate ( $form, &$form_state )
         $file = file_load ( $values['covariates_file'] );
         //fwrite ( $debug, "file : " . print_r ( $file, TRUE ) . "\n" );
 
-        $result = ebd_covariates_check ( $file );
-        //fwrite ( $debug, "result : " . print_r ( $result, TRUE ) . "\n" );
-
-        if ( $result == NULL )
-            form_set_error ( "covariates_file",
-                "Error in covariates.csv!  Please fix and try again." );
-        else
+        if ( $file !== FALSE )
         {
-            $upload_info['covariates'] = array ( "file" => $file,
-                "entries" => $result['entries'],
-                "subjects" => $result['subjects'] );
-            $upload_info['step'] = $EBD_UPLOAD_STEPS[2];
+            $result = ebd_covariates_check ( $file );
+            //fwrite ( $debug, "result : " . print_r ( $result, TRUE ) . "\n" );
+
+            if ( $result == NULL )
+                form_set_error ( "covariates_file",
+                    "Error in covariates.csv!  Please fix and try again..." );
+            else
+            {
+                $upload_info['covariates'] = array ( "file" => $file,
+                    "entries" => $result['entries'],
+                    "subjects" => $result['subjects'] );
+                $upload_info['step'] = $EBD_UPLOAD_STEPS[2];
+            }
         }
     }
 
     else if ( $upload_info['step'] == $EBD_UPLOAD_STEPS[2] )
     {
+        //fwrite ( $debug, "file : " . print_r ( $values['surfavg_file'], TRUE ) . "\n" );
+
         if ( $values['op'] === $EBD_UPLOAD_PREVIOUS_BUTTON )
             $upload_info['step'] = $EBD_UPLOAD_STEPS[1];
 
@@ -977,11 +1101,19 @@ function ebd_upload_multipage_form_validate ( $form, &$form_state )
             }
             else if ( $result === 2 )
                 form_set_error ( "surfavg_file",
-                    "Error in CorticalMeasuresENIGMA_SurfAvg.csv!  Please fix and try again." );
+                    "Please fix the above error(s) in your CorticalMeasuresENIGMA_SurfAvg.csv file and try again..." );
         }
 
         else if ( $values['op'] === $EBD_UPLOAD_PROCEED_BUTTON )
-            $upload_info['step'] = $EBD_UPLOAD_STEPS[3];
+        {
+            if ( empty ( $values['surfavg_file'] ) )
+            {
+                form_set_error ( "surfavg_file", "Upload file missing!" );
+                return;
+            }
+            else
+                $upload_info['step'] = $EBD_UPLOAD_STEPS[3];
+        }
     }
 
     else if ( $upload_info['step'] == $EBD_UPLOAD_STEPS[3] )
@@ -1017,11 +1149,19 @@ function ebd_upload_multipage_form_validate ( $form, &$form_state )
             }
             else if ( $result === 2 )
                 form_set_error ( "thickavg_file",
-                    "Error in CorticalMeasuresENIGMA_ThickAvg.csv!  Please fix and try again." );
+                    "Please fix the above error(s) in your CorticalMeasuresENIGMA_ThickAvg.csv file and try again..." );
         }
 
         else if ( $values['op'] === $EBD_UPLOAD_PROCEED_BUTTON )
-            $upload_info['step'] = $EBD_UPLOAD_STEPS[4];
+        {
+            if ( empty ( $values['surfavg_file'] ) )
+            {
+                form_set_error ( "surfavg_file", "Upload file missing!" );
+                return;
+            }
+            else
+                $upload_info['step'] = $EBD_UPLOAD_STEPS[4];
+        }
     }
 
     else if ( $upload_info['step'] == $EBD_UPLOAD_STEPS[4] )
@@ -1057,11 +1197,19 @@ function ebd_upload_multipage_form_validate ( $form, &$form_state )
             }
             else if ( $result === 2 )
                 form_set_error ( "volumes_file",
-                    "Error in LandRvolumes.csv!  Please fix and try again." );
+                    "Please fix the above error(s) in your LandRvolumes.csv file and try again..." );
         }
 
         else if ( $values['op'] === $EBD_UPLOAD_PROCEED_BUTTON )
-            $upload_info['step'] = $EBD_UPLOAD_STEPS[5];
+        {
+            if ( empty ( $values['surfavg_file'] ) )
+            {
+                form_set_error ( "surfavg_file", "Upload file missing!" );
+                return;
+            }
+            else
+                $upload_info['step'] = $EBD_UPLOAD_STEPS[5];
+        }
     }
     //fwrite ( $debug, "new upload_info : " . print_r ( $upload_info, TRUE ) . "\n" );
 
