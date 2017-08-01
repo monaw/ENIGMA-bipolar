@@ -145,14 +145,14 @@ function ebd_agreement_form ( $form, &$form_state )
     );
 
     $form['contribute'] = array (
-        '#title' => 'Do you agree to contribute data from your cohort (cortical/subcortical brain measures and clinical/demographic variables) for the sole purpose of addressing the aims outlined in the brain aging secondary proposal?',
+        '#title' => 'Do you agree to contribute data from your cohort (cortical/subcortical brain measures and clinical/demographic variables) for the sole purpose of addressing the aims outlined in the brain aging <a href="sites/default/files/Analysis_Plan_for_ENIGMA-BD_Brain_Age.pdf" target="_secondary">secondary proposal</a>?',
         '#required' => TRUE,
         '#options' => array ( '1' => 'Yes', '0' => 'No' ),
         '#type' => 'radios',
     );
 
     $form['storing'] = array (
-        '#title' => 'Do you agree to securely storing data from your cohort (brain measures and clinical/demographic variables) on the XSEDE Jetstream and UCSD servers (PI- Lisa Eyler) where only the analysts named in the proposal will have access for the specific aims of this project?',
+        '#title' => 'Do you agree to securely storing data from your cohort (brain measures and clinical/demographic variables) on the XSEDE Jetstream and UCSD servers (PI- Lisa Eyler) and on servers at Orygen in Australia (PI-Lianne Schmaal) where only the analysts named in the proposal will have access for the specific aims of this project?',
         '#options' => array ( '1' => 'Yes', '0' => 'No' ),
         '#type' => 'radios',
         '#states' => array (
@@ -239,8 +239,12 @@ function ebd_agreement_form_submit ( $form, &$form_state )
         drupal_set_message
             ( "You've chosen not to contribute your data.  You may now " .
             l ( "logout", $EBD_LOGOUT_URL ) . ".  Thank you." );
+        $userx->field_user_agreement_status = ebd_value_field_create
+            ( $EBD_AGREEMENT_STATUS_NO );
+        /*
         $userx->field_user_agreement_status[LANGUAGE_NONE][0]['value'] =
             $EBD_AGREEMENT_STATUS_NO;
+        */
         user_save ( $userx );
         drupal_goto ( $EBD_BLANK_PAGE );
     }
@@ -250,8 +254,12 @@ function ebd_agreement_form_submit ( $form, &$form_state )
         drupal_set_message
             ( "You've chosen not to allow us to store your data.  You may now " .
             l ( "logout", $EBD_LOGOUT_URL ) . ".  Thank you." );
+        $userx->field_user_agreement_status = ebd_value_field_create 
+            ( $EBD_AGREEMENT_STATUS_NO );
+        /*
         $userx->field_user_agreement_status[LANGUAGE_NONE][0]['value'] =
             $EBD_AGREEMENT_STATUS_NO;
+        */
         user_save ( $userx );
         drupal_goto ( $EBD_BLANK_PAGE );
     }
@@ -261,8 +269,12 @@ function ebd_agreement_form_submit ( $form, &$form_state )
         drupal_set_message
             ( "All approvals must be in place before uploading data, please return to the website and complete another agreement form when all approvals have been secured.  You may now " .
             l ( "logout", $EBD_LOGOUT_URL ) . ".  Thank you.", 'warning' );
+        $userx->field_user_agreement_status = ebd_value_field_create
+            ( $EBD_AGREEMENT_STATUS_REDO );
+        /*
         $userx->field_user_agreement_status[LANGUAGE_NONE][0]['value'] =
             $EBD_AGREEMENT_STATUS_REDO;
+        */
         user_save ( $userx );
         drupal_goto ( $EBD_BLANK_PAGE );
     }
@@ -272,8 +284,12 @@ function ebd_agreement_form_submit ( $form, &$form_state )
         drupal_set_message
             ( "Thank you!  We will request your data from the USC group. You may now " .
             l ( "logout", $EBD_LOGOUT_URL ) . "." );
+        $userx->field_user_agreement_status = ebd_value_field_create
+            ( $EBD_AGREEMENT_STATUS_OK );
+        /*
         $userx->field_user_agreement_status[LANGUAGE_NONE][0]['value'] =
             $EBD_AGREEMENT_STATUS_OK;
+        */
         user_save ( $userx );
         drupal_goto ( $EBD_BLANK_PAGE );
     }
@@ -314,8 +330,8 @@ function ebd_covariates_check ( $file )
     global $EBD_DEBUG_FILE;
     global $EBD_PRIVATE_URI_PREFIX;
 
-    //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
-    //fwrite ( $debug, "entered ebd_covariates_check\n" );
+    $debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    fwrite ( $debug, "entered ebd_covariates_check\n" );
 
     $data = NULL;
 
@@ -480,6 +496,49 @@ function ebd_file_element_process ( $element, &$form_state, $form )
 }
 
 
+function ebd_get_agreements_by_uid ( $userid )
+{
+    global $EBD_DEBUG_FILE;
+    global $EBD_PRIVATE_URI_PREFIX;
+
+    //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    //fwrite ( $debug, "entered ebd_get_agreements_by_uid\n" );
+    //fwrite ( $debug, "userid : " . print_r ( $userid, TRUE ) . "\n" );
+
+    if ( empty ( $userid ) )
+        return ( NULL );
+
+    $agreements = array();
+    $query = "SELECT nid FROM node WHERE type='agreements' AND uid='" .
+        $userid . "'";
+    //fwrite ( $debug, "query : " . print_r ( $query, TRUE ) . "\n" );
+    $result = db_query ( $query );
+
+    foreach ( $result as $record )
+        $agreements[] = node_load ( $record->nid );
+    //fwrite ( $debug, "agreements : " . print_r ( $agreements, TRUE ) . "\n" );
+
+    return ( $agreements );
+}
+
+
+function ebd_get_pi_by_uid ( $userid )
+{
+    global $EBD_DEBUG_FILE;
+    global $EBD_PRIVATE_URI_PREFIX;
+
+    $debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    fwrite ( $debug, "entered ebd_get_pi_by_uid\n" );
+    fwrite ( $debug, "userid : " . print_r ( $userid, TRUE ) . "\n" );
+
+    if ( empty ( $userid ) )
+        return ( NULL );
+
+    $userx = user_load ( $userid );
+    return ( $userx->field_user_pi[LANGUAGE_NONE][0]['value'] );
+}
+
+
 /**
  * Implements hook_menu
  **/
@@ -497,7 +556,15 @@ function ebd_menu()
         'title' => "Upload",
         'access arguments' => array ( "Upload data" ),
         'page callback' => 'drupal_get_form',
-        'page arguments' => array ( 'ebd_upload_multipage_form' ),
+        'page arguments' => array ( 'ebd_upload_multipage_form', '' ),
+        'type' => MENU_CALLBACK,
+    );
+
+    $items['upload/%user'] = array (
+        'title' => "Upload",
+        'access arguments' => array ( "Upload data" ),
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array ( 'ebd_upload_multipage_form', 1 ),
         'type' => MENU_CALLBACK,
     );
 
@@ -775,7 +842,7 @@ function ebd_upload_check ( $info, $file )
 /**
  * Create the multi-page user upload forms
  **/
-function ebd_upload_multipage_form ( $form, &$form_state )
+function ebd_upload_multipage_form ( $form, &$form_state, $for_user )
 {
     global $user;
     global $EBD_DEBUG_FILE;
@@ -786,10 +853,11 @@ function ebd_upload_multipage_form ( $form, &$form_state )
     global $EBD_UPLOAD_PROCEED_BUTTON;
     global $EBD_UPLOAD_STEPS;
 
-    //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
-    //fwrite ( $debug, "entered ebd_upload_multipage_form\n" );
+    $debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    fwrite ( $debug, "entered ebd_upload_multipage_form\n" );
     //fwrite ( $debug, "form : " . print_r ( $form, TRUE ) . "\n" );
     //fwrite ( $debug, "form_state values : " . print_r ( $form_state['values'], TRUE ) . "\n" );
+    //fwrite ( $debug, "for_user : " . print_r ( $for_user, TRUE ) . "\n" );
 
     $description = "";
     $max_file_size = file_upload_max_size();
@@ -816,8 +884,14 @@ function ebd_upload_multipage_form ( $form, &$form_state )
 
     // Create the form
     $form = array();
+
+    // First, if for_user is given, save that info
+    if ( ! empty ( $for_user ) )
+        $form['usc_upload_for'] = array ( '#type' => 'hidden',
+            '#value' => $for_user->uid );
+
     $form["info"] = array ( '#markup' =>
-        '<div class=\"info\">This is a multi-step form to upload your 4 files one at a time.  As a reminder, the 4 files are: covariates.csv, CorticalMeasuresENIGMA_SurfAvg.csv, CorticalMeasuresENIGMA_ThickAvg.csv, and LandRvolumes.csv.  If you do not have all 4 files prepared, please log out and return later when you are ready.<br>The upload process will check for and alert you to: 1) missing data in any fields, 2) improper coding of variables (such as Dx or Sex), and 3) lack of correspondence of SubjIDs from one file to the next.<br><br></div>' );
+        '<div class=\"info\">This is a multi-step form to upload your 4 files one at a time.  As a reminder, the 4 files are: covariates.csv, CorticalMeasuresENIGMA_SurfAvg.csv, CorticalMeasuresENIGMA_ThickAvg.csv, and LandRvolumes.csv.  More info about the expected file content can be found <a href="https://js-168-64.jetstream-cloud.org/node/4" target="file_format">here</a>.  If you do not have all 4 files prepared, please log out and return later when you are ready.<br><br>The upload process will check for and alert you to: 1) missing data in any fields, 2) improper coding of variables (such as Dx or Sex), and 3) lack of correspondence of SubjIDs from one file to the next.<br><br></div>' );
 
     if ( $step === $EBD_UPLOAD_STEPS[1] )
     {
@@ -964,11 +1038,12 @@ function ebd_upload_multipage_form ( $form, &$form_state )
 function ebd_upload_multipage_form_submit ( $form, &$form_state )
 {
     global $EBD_DEBUG_FILE;
+    global $EBD_LOGOUT_URL;
     global $EBD_UPLOAD_INFO;
     global $EBD_UPLOAD_STEPS;
 
-    //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
-    //fwrite ( $debug, "entered ebd_upload_multipage_form_submit\n" );
+    $debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    fwrite ( $debug, "entered ebd_upload_multipage_form_submit\n" );
     $upload_info = $form_state[$EBD_UPLOAD_INFO];
     //fwrite ( $debug, "upload_info : " . print_r ( $upload_info, TRUE ) . "\n" );
     $values = $form_state['values'];
@@ -995,7 +1070,8 @@ function ebd_upload_multipage_form_submit ( $form, &$form_state )
                 'error' );
         else
             drupal_set_message
-                ( 'Your upload has been successfully saved.  Thank you!  You may now logout.' );
+                ( "Your upload has been successfully saved.  Thank you!  You may now " .
+                l ( "logout", $EBD_LOGOUT_URL ) );
     }
 
     else
@@ -1036,6 +1112,7 @@ function ebd_upload_multipage_form_validate ( $form, &$form_state )
         $upload_info['step'] == $EBD_UPLOAD_STEPS[1] )
     {
         $upload_info['timestamp'] = $values['timestamp'];
+        $upload_info['usc_upload_for'] = $values['usc_upload_for'];
 
         /* Not needed since first file is set to be required...
         if ( empty ( $values['covariates_file'] ) )
@@ -1222,9 +1299,11 @@ function ebd_upload_save ( $info )
     global $user;
     global $EBD_DEBUG_FILE;
 
-    //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
-    //fwrite ( $debug, "entered ebd_upload_save\n" );
-    //fwrite ( $debug, "info : " . print_r ( $info, TRUE ) . "\n" );
+    $debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    fwrite ( $debug, "entered ebd_upload_save\n" );
+    fwrite ( $debug, "info : " . print_r ( $info, TRUE ) . "\n" );
+
+    $user = user_load ( $user->uid );
 
     // Make sure 4 files are present
     if ( ! isset ( $info['covariates']['file']->fid ) ||
@@ -1273,14 +1352,15 @@ function ebd_upload_save ( $info )
     //fwrite ( $debug, "age_total : " . print_r ( $age_total, TRUE ) . "\n" );
     //fwrite ( $debug, "num_males : " . print_r ( $num_males, TRUE ) . "\n" );
     //fwrite ( $debug, "num_females : " . print_r ( $num_females, TRUE ) . "\n" );
-    //fwrite ( $debug, "num_sites : " . print_r ( $num_sites, TRUE ) . "\n" );
+    fwrite ( $debug, "num_sites : " . print_r ( $num_sites, TRUE ) . "\n" );
     //fwrite ( $debug, "num_subjects : " . print_r ( $num_subjects, TRUE ) . "\n" );
 
     // Create the update node
     $node = new stdClass();
     $node->uid = $user->uid;
     $node->type = "uploads";
-    $node->title = $info['timestamp'];
+    //$node->title = $info['timestamp'];
+    //$node->title = $user->uid;
     $node->is_new = TRUE;
     $node->status = 1;
     $node->field_upload_covariates_file = array ( LANGUAGE_NONE => array (
@@ -1305,9 +1385,70 @@ function ebd_upload_save ( $info )
         array ( 'value' => $num_males ) ) );
     $node->field_upload_num_female_subjects = array ( LANGUAGE_NONE => array (
         array ( 'value' => $num_females ) ) );
-    //fwrite ( $debug, "node : " . print_r ( $node, TRUE ) . "\n" );
+
+    if ( isset ( $info['usc_upload_for'] ) )
+    {
+        $userx = user_load ( $info['usc_upload_for'] );
+        $node->title = $userx->field_user_pi[LANGUAGE_NONE][0]['value'];
+        $node->field_upload_uploaded_for_user = ebd_user_reference_field_create
+            ( $info['usc_upload_for'] );
+    }
+    else
+    {
+        fwrite ( $debug, "user : " . print_r ( $user, TRUE ) . "\n" );
+        $node->title = $user->field_user_pi[LANGUAGE_NONE][0]['value'];
+        $node->field_upload_uploaded_for_user =
+            ebd_user_reference_field_create ( $user->uid );
+    }
+    fwrite ( $debug, "new upload node : " . print_r ( $node, TRUE ) . "\n" );
 
     node_save ( $node );
+
+    // If there is a usc_upload_for, we need to update agreements for that
+    // user
+    if ( isset ( $info['usc_upload_for'] ) )
+    {
+        $agreements = ebd_get_agreements_by_uid ( $info['usc_upload_for'] );
+        fwrite ( $debug, "agreements : " . print_r ( $agreements, TRUE ) . "\n" );
+        foreach ( $agreements as $agreement )
+        {
+            // debugging
+            /*
+            if ( isset (
+                $agreement->field_agreements_shared[LANGUAGE_NONE][0]['value'] )
+            )
+                fwrite ( $debug, "here 1\n" );
+            if ( isset (
+                $agreement->field_agreements_usc[LANGUAGE_NONE][0]['value'] ) )
+                fwrite ( $debug, "here 2\n" );
+            if ( $agreement->field_agreements_shared[LANGUAGE_NONE][0]['value']
+                === "1" )
+                fwrite ( $debug, "here 3\n" );
+            if ( $agreement->field_agreements_usc[LANGUAGE_NONE][0]['value']
+                === "1" )
+                fwrite ( $debug, "here 4\n" );
+            */
+
+            // If agreement has yes for USC share and allow them to upload,
+            // update the uploaded field
+            if ( isset (
+                $agreement->field_agreements_shared[LANGUAGE_NONE][0]['value'] )
+                && isset (
+                $agreement->field_agreements_usc[LANGUAGE_NONE][0]['value'] ) &&
+                ( $agreement->field_agreements_shared[LANGUAGE_NONE][0]['value']
+                === "1" ) && 
+                ( $agreement->field_agreements_usc[LANGUAGE_NONE][0]['value']
+                === "1" ) )
+            {
+                fwrite ( $debug, "updating agreement : " . print_r ( $agreement, TRUE ) . "\n" );
+                $agreement->field_agreements_uploaded =
+                    ebd_value_field_create ( 1 );
+                // array ( LANGUAGE_NONE => array ( array ( "value" => 1 ) ) );
+                node_save ( $agreement );
+                fwrite ( $debug, "saved agreement : " . print_r ( $agreement, TRUE ) . "\n" );
+            }
+        }
+    }
 
     return ( $node );
 }
@@ -1318,7 +1459,7 @@ function ebd_upload_save ( $info )
  * object's field
  * @param value - a value to set
  * @return FALSE if argument is empty; otherwise returns
- *      array ( LANGUAGE_NONE => array ( 'value' => $value ) )
+ *      array ( LANGUAGE_NONE => array ( array ( 'value' => $value ) ) )
  **/
 function ebd_value_field_create ( $value )
 {
@@ -1326,6 +1467,24 @@ function ebd_value_field_create ( $value )
     if ( isset ( $value ) )
       return ( array ( LANGUAGE_NONE =>
           array ( array ( 'value' => $value ) ) ) );
+    else
+        return FALSE;
+}
+
+
+/**
+ * Create the array for the given user ID which can be used to set a node
+ * object's user reference field
+ * @param uid - a user ID to set
+ * @return FALSE if argument is empty; otherwise returns
+ *      array ( LANGUAGE_NONE => array ( array ( 'uid' => $uid ) ) )
+ **/
+function ebd_user_reference_field_create ( $uid )
+{
+    // Do not use empty to test as 0 will fail
+    if ( isset ( $uid ) )
+      return ( array ( LANGUAGE_NONE =>
+          array ( array ( 'uid' => $uid ) ) ) );
     else
         return FALSE;
 }
