@@ -330,8 +330,8 @@ function ebd_covariates_check ( $file )
     global $EBD_DEBUG_FILE;
     global $EBD_PRIVATE_URI_PREFIX;
 
-    $debug = fopen ( $EBD_DEBUG_FILE, "a" );
-    fwrite ( $debug, "entered ebd_covariates_check\n" );
+    //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    //fwrite ( $debug, "entered ebd_covariates_check\n" );
 
     $data = NULL;
 
@@ -344,11 +344,11 @@ function ebd_covariates_check ( $file )
     $age_index = -1;
     $dx_index = -1;
     $gender_index = -1;
+    $missing_columns = array();
+    $site_index = -1;
+    $subjid_index = -1;
     $headers = fgetcsv ( $file_handle, 0, "," );
     //fwrite ( $debug, "headers : " . print_r ( $headers, TRUE ) . "\n" );
-    $missing_columns = array();
-    $sites = array();
-    $subjid_index = -1;
 
     foreach ( $headers as $index => $header )
     {
@@ -367,14 +367,14 @@ function ebd_covariates_check ( $file )
         {
             $site = substr ( $header, 0, 4 );
             if ( strcasecmp ( $site, "Site" ) === 0 )
-                $sites[$index] = $header;
+                $site_index = $index;
         }
     }
     //fwrite ( $debug, "subjid_index : " . print_r ( $subjid_index, TRUE ) . "\n" );
     //fwrite ( $debug, "dx_index : " . print_r ( $dx_index, TRUE ) . "\n" );
     //fwrite ( $debug, "age_index : " . print_r ( $age_index, TRUE ) . "\n" );
     //fwrite ( $debug, "gender_index : " . print_r ( $gender_index, TRUE ) . "\n" );
-    //fwrite ( $debug, "sites : " . print_r ( $sites, TRUE ) . "\n" );
+    //fwrite ( $debug, "site_index : " . print_r ( $site_index, TRUE ) . "\n" );
 
     // Check required columns' index
     if ( $subjid_index == -1 )
@@ -406,6 +406,8 @@ function ebd_covariates_check ( $file )
     $data = array();
     $entries = array();
     $line_counter = 2;
+    $num_sites = 1;
+    $sites = array();
     $subjects = array();
 
     // Now check and save each line...
@@ -445,6 +447,35 @@ function ebd_covariates_check ( $file )
             break;
         }
 
+        if ( $site_index > -1 )
+        {
+            if ( ! isset ( $line[$site_index] ) )
+            {
+                drupal_set_message (
+                    "Invalid Site value (must be > 0) on line " .
+                    $line_counter, 'error', FALSE );
+                $cont = FALSE;
+                break;
+            }
+
+            else
+            {
+                $site_value = ( int ) $line[$site_index];
+                //fwrite ( $debug, "site_value : " . print_r ( $site_value, TRUE ) . "\n" );
+
+                if ( $site_value <= 0 )
+                {
+                    drupal_set_message (
+                        "Invalid Site value (must be > 0) on line " .
+                        $line_counter, 'error', FALSE );
+                    $cont = FALSE;
+                    break;
+                }
+                else
+                    $sites[$site_value] = 1;
+            }
+        }
+
         $entry = array();
         $entry['subjid'] = $line[$subjid_index];
         $entry['dx'] = $line[$dx_index];
@@ -452,25 +483,42 @@ function ebd_covariates_check ( $file )
         $entry['gender'] = $line[$gender_index];
         $subjects[] = $line[$subjid_index];
 
-        if ( ! empty ( $sites ) )
-        {
-            foreach ( $sites as $site_index => $site_name )
-                $entry[$site_index] = $sites[$site_index];
-        }
-
         $entries[] = $entry;
         $line_counter++;
     }
     //fwrite ( $debug, "cont : " . print_r ( $cont, TRUE ) . "\n" );
     //fwrite ( $debug, "data : " . print_r ( $data, TRUE ) . "\n" );
+    //fwrite ( $debug, "sites : " . print_r ( $sites, TRUE ) . "\n" );
 
     if ( $cont )
     {
         $data['entries'] = $entries;
         $data['subjects'] = $subjects;
+
+        if ( empty ( $sites ) )
+            $data['sites'] = 1;
+        else
+        {
+            $tmp = count ( $sites );
+            //fwrite ( $debug, "tmp : " . print_r ( $tmp, TRUE ) . "\n" );
+            ksort ( $sites );
+            //fwrite ( $debug, "sites (sorted) : " . print_r ( $sites, TRUE ) . "\n" );
+            end ( $sites );
+            $key = key ( $sites );
+            //fwrite ( $debug, "key : " . print_r ( $key, TRUE ) . "\n" );
+
+            if ( $tmp != $key )
+            {
+                drupal_set_message (
+                    "There is a problem with your Site column, please make sure the values in that column are integers starting at 1 with no gaps",
+                    'error', FALSE );
+                $data = null;
+            }
+        }
     }
     else
         $data = NULL;
+    //fwrite ( $debug, "data : " . print_r ( $data, TRUE ) . "\n" );
 
     return ( $data );
 }
@@ -527,9 +575,9 @@ function ebd_get_pi_by_uid ( $userid )
     global $EBD_DEBUG_FILE;
     global $EBD_PRIVATE_URI_PREFIX;
 
-    $debug = fopen ( $EBD_DEBUG_FILE, "a" );
-    fwrite ( $debug, "entered ebd_get_pi_by_uid\n" );
-    fwrite ( $debug, "userid : " . print_r ( $userid, TRUE ) . "\n" );
+    //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    //fwrite ( $debug, "entered ebd_get_pi_by_uid\n" );
+    //fwrite ( $debug, "userid : " . print_r ( $userid, TRUE ) . "\n" );
 
     if ( empty ( $userid ) )
         return ( NULL );
@@ -853,8 +901,8 @@ function ebd_upload_multipage_form ( $form, &$form_state, $for_user )
     global $EBD_UPLOAD_PROCEED_BUTTON;
     global $EBD_UPLOAD_STEPS;
 
-    $debug = fopen ( $EBD_DEBUG_FILE, "a" );
-    fwrite ( $debug, "entered ebd_upload_multipage_form\n" );
+    //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    //fwrite ( $debug, "entered ebd_upload_multipage_form\n" );
     //fwrite ( $debug, "form : " . print_r ( $form, TRUE ) . "\n" );
     //fwrite ( $debug, "form_state values : " . print_r ( $form_state['values'], TRUE ) . "\n" );
     //fwrite ( $debug, "for_user : " . print_r ( $for_user, TRUE ) . "\n" );
@@ -901,7 +949,7 @@ function ebd_upload_multipage_form ( $form, &$form_state, $for_user )
         $form["covariates_file"] = array (
             '#title' => 'Step 1. Upload your covariates.csv file',
             '#description' =>
-                'The file must contain at least SubjID, Dx, Age and Sex columns; Site# column(s) are optional. Column names are case-insensitive but must be spelled as noted.  Dx must be either 0 (control/comparison) or 1 (bipolar), Age must be greater than 0, Sex must be either 1 (males) or 2 (females). Max file size is ' .
+                'The file must contain at least SubjID, Dx, Age and Sex columns. Site column is optional but if present, must be integer starting at 1. Column names are case-insensitive but must be spelled as noted.  Dx must be either 0 (control/comparison) or 1 (bipolar), Age must be greater than 0, Sex must be either 1 (males) or 2 (females). Max file size is ' .
                 $max_file_size . ' bytes.',
             '#progress_indicator' => "bar",
             '#required' => TRUE,
@@ -1042,8 +1090,8 @@ function ebd_upload_multipage_form_submit ( $form, &$form_state )
     global $EBD_UPLOAD_INFO;
     global $EBD_UPLOAD_STEPS;
 
-    $debug = fopen ( $EBD_DEBUG_FILE, "a" );
-    fwrite ( $debug, "entered ebd_upload_multipage_form_submit\n" );
+    //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    //fwrite ( $debug, "entered ebd_upload_multipage_form_submit\n" );
     $upload_info = $form_state[$EBD_UPLOAD_INFO];
     //fwrite ( $debug, "upload_info : " . print_r ( $upload_info, TRUE ) . "\n" );
     $values = $form_state['values'];
@@ -1112,7 +1160,9 @@ function ebd_upload_multipage_form_validate ( $form, &$form_state )
         $upload_info['step'] == $EBD_UPLOAD_STEPS[1] )
     {
         $upload_info['timestamp'] = $values['timestamp'];
-        $upload_info['usc_upload_for'] = $values['usc_upload_for'];
+
+        if ( isset ( $values['usc_upload_for'] ) )
+            $upload_info['usc_upload_for'] = $values['usc_upload_for'];
 
         /* Not needed since first file is set to be required...
         if ( empty ( $values['covariates_file'] ) )
@@ -1137,7 +1187,8 @@ function ebd_upload_multipage_form_validate ( $form, &$form_state )
             {
                 $upload_info['covariates'] = array ( "file" => $file,
                     "entries" => $result['entries'],
-                    "subjects" => $result['subjects'] );
+                    "subjects" => $result['subjects'],
+                    "sites" => $result['sites'] );
                 $upload_info['step'] = $EBD_UPLOAD_STEPS[2];
             }
         }
@@ -1299,9 +1350,9 @@ function ebd_upload_save ( $info )
     global $user;
     global $EBD_DEBUG_FILE;
 
-    $debug = fopen ( $EBD_DEBUG_FILE, "a" );
-    fwrite ( $debug, "entered ebd_upload_save\n" );
-    fwrite ( $debug, "info : " . print_r ( $info, TRUE ) . "\n" );
+    //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    //fwrite ( $debug, "entered ebd_upload_save\n" );
+    //fwrite ( $debug, "info : " . print_r ( $info, TRUE ) . "\n" );
 
     $user = user_load ( $user->uid );
 
@@ -1328,7 +1379,8 @@ function ebd_upload_save ( $info )
     $age_total = 0;
     $num_females = 0;
     $num_males = 0;
-    $num_sites = count ( $info['covariates']['entries'][0] ) - 4;
+    //$num_sites = count ( $info['covariates']['entries'][0] ) - 4;
+    $num_sites = count ( $info['covariates']['sites'] );
     $num_subjects = count ( $info['covariates']['subjects'] );
 
     foreach ( $info['covariates']['entries'] as $entry )
@@ -1352,7 +1404,7 @@ function ebd_upload_save ( $info )
     //fwrite ( $debug, "age_total : " . print_r ( $age_total, TRUE ) . "\n" );
     //fwrite ( $debug, "num_males : " . print_r ( $num_males, TRUE ) . "\n" );
     //fwrite ( $debug, "num_females : " . print_r ( $num_females, TRUE ) . "\n" );
-    fwrite ( $debug, "num_sites : " . print_r ( $num_sites, TRUE ) . "\n" );
+    //fwrite ( $debug, "num_sites : " . print_r ( $num_sites, TRUE ) . "\n" );
     //fwrite ( $debug, "num_subjects : " . print_r ( $num_subjects, TRUE ) . "\n" );
 
     // Create the update node
@@ -1395,12 +1447,12 @@ function ebd_upload_save ( $info )
     }
     else
     {
-        fwrite ( $debug, "user : " . print_r ( $user, TRUE ) . "\n" );
+        //fwrite ( $debug, "user : " . print_r ( $user, TRUE ) . "\n" );
         $node->title = $user->field_user_pi[LANGUAGE_NONE][0]['value'];
         $node->field_upload_uploaded_for_user =
             ebd_user_reference_field_create ( $user->uid );
     }
-    fwrite ( $debug, "new upload node : " . print_r ( $node, TRUE ) . "\n" );
+    //fwrite ( $debug, "new upload node : " . print_r ( $node, TRUE ) . "\n" );
 
     node_save ( $node );
 
@@ -1409,7 +1461,7 @@ function ebd_upload_save ( $info )
     if ( isset ( $info['usc_upload_for'] ) )
     {
         $agreements = ebd_get_agreements_by_uid ( $info['usc_upload_for'] );
-        fwrite ( $debug, "agreements : " . print_r ( $agreements, TRUE ) . "\n" );
+        //fwrite ( $debug, "agreements : " . print_r ( $agreements, TRUE ) . "\n" );
         foreach ( $agreements as $agreement )
         {
             // debugging
@@ -1440,12 +1492,12 @@ function ebd_upload_save ( $info )
                 ( $agreement->field_agreements_usc[LANGUAGE_NONE][0]['value']
                 === "1" ) )
             {
-                fwrite ( $debug, "updating agreement : " . print_r ( $agreement, TRUE ) . "\n" );
+                //fwrite ( $debug, "updating agreement : " . print_r ( $agreement, TRUE ) . "\n" );
                 $agreement->field_agreements_uploaded =
                     ebd_value_field_create ( 1 );
                 // array ( LANGUAGE_NONE => array ( array ( "value" => 1 ) ) );
                 node_save ( $agreement );
-                fwrite ( $debug, "saved agreement : " . print_r ( $agreement, TRUE ) . "\n" );
+                //fwrite ( $debug, "saved agreement : " . print_r ( $agreement, TRUE ) . "\n" );
             }
         }
     }
