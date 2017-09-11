@@ -60,11 +60,16 @@ $EBD_UPLOAD_URL = "upload";
 
 
 /**
- * Create, save and return an agreements node with the given values
+ * Create, save and return an agreements node with the given values.  Only
+ * save values if the previous answer is ok.
  **/
 function ebd_agreement_create_node ( $values )
 {
     global $user;
+    global $EBD_DEBUG_FILE;
+    //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    //fwrite ( $debug, "entered ebd_agreement_create_node\n" );
+    //fwrite ( $debug, "values : " . print_r ( $values, TRUE ) . "\n" );
 
     $userx = user_load ( $user->uid );
 
@@ -74,16 +79,26 @@ function ebd_agreement_create_node ( $values )
     $node->is_new = TRUE;
     $node->uid = $user->uid;
     $node->status = 1;
+
     $node->field_agreements_contribute = ebd_value_field_create
         ( $values['contribute'] );
-    $node->field_agreements_storing = ebd_value_field_create
-        ( $values['storing'] );
-    $node->field_agreements_additional = ebd_value_field_create
-        ( $values['additional'] );
-    $node->field_agreements_shared = ebd_value_field_create
-        ( $values['shared'] );
-    if ( isset ( $values['usc'] ) )
-        $node->field_agreements_usc = ebd_value_field_create ( $values['usc'] );
+
+    if ( $values['contribute'] == 1 )
+    {
+        $node->field_agreements_storing = ebd_value_field_create
+            ( $values['storing'] );
+
+        if ( $values['storing'] == 1 )
+        {
+            $node->field_agreements_additional = ebd_value_field_create
+                ( $values['additional'] );
+
+            if ( $values['additional'] === "0" )
+                $node->field_agreements_usc = ebd_value_field_create
+                    ( $values['usc'] );
+        }
+    }
+    //fwrite ( $debug, "node : " . print_r ( $node, TRUE ) . "\n" );
 
     node_save ( $node );
     return ( $node );
@@ -112,6 +127,7 @@ function ebd_agreement_form ( $form, &$form_state )
     {
         $status =
             $userx->field_user_agreement_status[LANGUAGE_NONE][0]['value'];
+        //fwrite ( $debug, "status : " . print_r ( $status, TRUE ) . "\n" );
         if ( $status == $EBD_AGREEMENT_STATUS_OK )
             drupal_set_message
                 ( "You've already agreed.  If you wish to revoke or update your agreement, please complete a new agreement below.  If you wish to re-upload your data, click " .
@@ -172,6 +188,7 @@ function ebd_agreement_form ( $form, &$form_state )
         ),
     );
 
+    /*
     $form['shared'] = array (
         '#title' => 'Have you already shared CorticalMeasuresENIGMA_SurfAvg.csv, CorticalMeasuresENIGMA_ThickAvg.csv, LandRVolumes.csv, and covariates.csv with the USC group?',
         '#options' => array ( '1' => 'Yes', '0' => 'No' ),
@@ -201,8 +218,26 @@ function ebd_agreement_form ( $form, &$form_state )
                 array ( ':input[name="shared"]' => array ( 'value' => '1' ) ),
         ),
     );
+    */
+
+    $form['usc'] = array (
+        '#title' => 'Do you give permission for USC to upload the required files for the brain age analysis (CorticalMeasuresENIGMA_SurfAvg.csv, CorticalMeasuresENIGMA_ThickAvg.csv, LandRVolumes.csv, and covariates.csv) on your behalf?  If you select "yes", you will need to work with Chris Ching at USC to make sure that he has all the necessary files, and then his group will perform the upload process for you. Select one of the "no" answers if you have the files ready to contribute yourself and would rather not go through the intermediary of USC.',
+        '#options' => array ( '2' => 'Yes',
+            '1' => 'No, USC doesn’t have any of my data',
+            '0' => 'No, USC may have some of my data, but I prefer to do the upload myself' ),
+        '#type' => 'radios',
+        '#states' => array (
+            'visible' => array (
+                ':input[name="contribute"]' => array ( 'value' => '1' ),
+                ':input[name="storing"]' => array ( 'value' => '1' ),
+                ':input[name="additional"]' => array ( 'value' => '0' ),
+            ),
+        ),
+    );
 
     $form['submit'] = array ( '#type' => 'submit', '#value' => 'Submit' );
+        //'#validate' => 'ebd_agreement_form_validate' );
+    //fwrite ( $debug, "form[submit] : " . print_r ( $form['submit'], TRUE ) . "\n" );
 
     return ( $form );
 }
@@ -279,7 +314,8 @@ function ebd_agreement_form_submit ( $form, &$form_state )
         drupal_goto ( $EBD_BLANK_PAGE );
     }
 
-    else if ( $values['shared'] === "1" && $values['usc'] === "1" )
+    //else if ( $values['shared'] === "1" && $values['usc'] === "1" )
+    else if ( $values['usc'] === "2" )
     {
         drupal_set_message
             ( "Thank you!  We will request your data from the USC group. You may now " .
@@ -300,23 +336,86 @@ function ebd_agreement_form_submit ( $form, &$form_state )
 
 
 /**
- * Validate the user agreement form.  The only thing that requires validating
- * is the last question.
+ * Validate the user agreement form.  Only the first question is required
+ * but subsequent question(s) may be required depending on the answer to the
+ * previous question.
  **/
 function ebd_agreement_form_validate ( $form, &$form_state )
 {
+    global $EBD_DEBUG_FILE;
+
     //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
     //fwrite ( $debug, "entered ebd_agreement_form_validate\n" );
     $values = $form_state['values'];
     //fwrite ( $debug, "values : " . print_r ( $values, TRUE ) . "\n" );
 
-    drupal_get_messages();
+    //drupal_get_messages();
 
+    /*
     if ( $values['contribute'] === "1" && $values['storing'] === "1" &&
         $values['additional'] === "0" && $values['shared'] === "1" &&
-        $values['usc'] == NULL )
-        form_set_error ( 'usc',
-            'Please answer last question on whether you agree to have the USC group share your data with us?' );
+    */
+
+    if ( $values['contribute'] === "1" && ! isset ( $values['storing'] ) )
+        form_set_error ( 'storing', 'Please answer second question...' );
+    else if ( $values['contribute'] === "1" && $values['storing'] === "1" &&
+        ! isset ( $values['additional'] ) )
+        form_set_error ( 'storing', 'Please answer third question...' );
+    else if ( $values['contribute'] === "1" && $values['storing'] === "1" &&
+        $values['additional'] === "0" && $values['usc'] == NULL )
+        form_set_error ( 'usc', 'Please answer last question...' );
+}
+
+
+/**
+ * This is the callback function for combining user upload data files for a
+ * single PI
+ **/
+function ebd_combine ( $userx, $node )
+{
+    global $EBD_DEBUG_FILE;
+
+    //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    //fwrite ( $debug, "entered ebd_combine\n" );
+    //fwrite ( $debug, "userx : " . print_r ( $userx, TRUE ) . "\n" );
+    //fwrite ( $debug, "node : " . print_r ( $node, TRUE ) . "\n" );
+
+    if ( empty ( $userx ) || empty ( $node ) )
+        drupal_set_message ( "Invalid user or upload info!", 'error' );
+    else
+    {
+        $combined = array();
+        $combined = ebd_file_get_data
+            ( $node->field_upload_covariates_file[LANGUAGE_NONE][0]['uri'],
+            $combined );
+        //fwrite ( $debug, "combined 1 : " . print_r ( $combined['headers'], TRUE ) . "\n" );
+        /*
+        $combined = ebd_file_get_data (
+            $node->field_upload_surface_file[LANGUAGE_NONE][0]['uri'],
+            $combined );
+        fwrite ( $debug, "combined 2 : " . print_r ( $combined['headers'], TRUE ) . "\n" );
+        $combined = ebd_file_get_data (
+            $node->field_upload_thickness_file[LANGUAGE_NONE][0]['uri'],
+            $combined );
+        fwrite ( $debug, "combined 3 : " . print_r ( $combined['headers'], TRUE ) . "\n" );
+        */
+    }
+
+    drupal_goto ( "uploads-list" );
+}
+
+
+function ebd_combine_data ( $data1, $data2 )
+{
+    global $EBD_DEBUG_FILE;
+
+    $debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    fwrite ( $debug, "entered ebd_combine_data\n" );
+    //fwrite ( $debug, "userx : " . print_r ( $userx, TRUE ) . "\n" );
+    //fwrite ( $debug, "node : " . print_r ( $node, TRUE ) . "\n" );
+
+    if ( empty ( $data1 ) || empty ( $data2 ) )
+        return ( NULL );
 }
 
 
@@ -336,8 +435,14 @@ function ebd_covariates_check ( $file )
     $data = NULL;
 
     if ( empty ( $file ) )
+    {
+        drupal_set_message ( "Error: file empty!", "error" );
         return ( $data );
+    }
 
+    // Following setting is needed in case the file came from a PC which
+    // results in newline problem
+    ini_set ( 'auto_detect_line_endings', TRUE );
     $file_handle = fopen ( $file->uri, "r" );
 
     // First, check header
@@ -490,6 +595,12 @@ function ebd_covariates_check ( $file )
     //fwrite ( $debug, "data : " . print_r ( $data, TRUE ) . "\n" );
     //fwrite ( $debug, "sites : " . print_r ( $sites, TRUE ) . "\n" );
 
+    if ( empty ( $subjects ) )
+    {
+        drupal_set_message ( "No subjects found!\n", 'error' );
+        return ( null );
+    }
+
     if ( $cont )
     {
         $data['entries'] = $entries;
@@ -525,6 +636,37 @@ function ebd_covariates_check ( $file )
 
 
 /**
+ * Retrieve the information from the given covariates file. The file should
+ * have been checked during upload so we will assume the file is ok.
+ * @return NULL - if error reading the file; otherwise will return a hashed
+ *                array (key = subject id) of the data read in and validated.
+ **/ 
+function ebd_covariates_get_data ( $uri )
+{
+    global $EBD_DEBUG_FILE;
+    global $EBD_PRIVATE_URI_PREFIX;
+
+    //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    //fwrite ( $debug, "entered ebd_covariates_get_data\n" );
+
+    $data = NULL;
+
+    if ( empty ( $uri ) )
+        return ( NULL );
+
+    $file = new stdClass();
+    $file->uri = $uri;
+    $result = ebd_covariates_check ( $file );
+
+    foreach ( $result['entries'] as $entry )
+        $data[$entry['subjid']] = $entry;
+    //fwrite ( $debug, "data : " . print_r ( $data, TRUE ) . "\n" );
+
+    return ( $data );
+}
+
+
+/**
  * Remove the unneeded upload button on the file upload forms
  **/
 function ebd_file_element_process ( $element, &$form_state, $form )
@@ -541,6 +683,82 @@ function ebd_file_element_process ( $element, &$form_state, $form )
     //fwrite ( $debug, "element 2 : " . print_r ( $element, TRUE ) . "\n" );
 
     return ( $element );
+}
+
+
+/**
+ * Read the file at the given uri.  This function assumes the subject ID is
+ * the first column.
+ * @return  NULL if there is a problem getting the data from the file;
+ *          otherwise return a nested indexed array ( "header" =>
+ *          column header strings WITHOUT the SubjID, "rows" => indexed array
+ *          ( "<SubjID>" => "<remaining row values>")
+ **/
+function ebd_file_get_data ( $uri )
+{
+    global $EBD_DEBUG_FILE;
+
+    $debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    fwrite ( $debug, "entered ebd_file_get_data\n" );
+    fwrite ( $debug, "uri : " . print_r ( $uri, TRUE ) . "\n" );
+
+    if ( empty ( $uri ) )
+        return ( NULL );
+
+    //$result = $data;
+    $data = array();
+
+    // Following setting is needed in case the file came from a PC which
+    // results in newline problem
+    ini_set ( 'auto_detect_line_endings', TRUE );
+    $file_handle = fopen ( $uri, "r" );
+    $headers = trim ( fgets ( $file_handle ) );
+    //$headers = fgetcsv ( $file_handle, 0, "," );
+    fwrite ( $debug, "headers : " . print_r ( $headers, TRUE ) . "\n" );
+
+    // Make sure subject ID is the first column
+    $pieces = explode ( ",", $headers, 2 );
+    fwrite ( $debug, "pieces : " . print_r ( $pieces, TRUE ) . "\n" );
+    if ( strcasecmp ( $pieces[0], "SubjID" ) !== 0 )
+        return ( NULL );
+
+    $rows = array();
+
+    /*
+    if ( empty ( $data ) )
+    {
+        $result['headers'] = $pieces[0] . "," . trim ( $pieces[1] );
+
+        while ( ( $line = fgets ( $file_handle ) ) != FALSE )
+        {
+            $pieces = explode ( ",", $line, 2 );
+            //fwrite ( $debug, "pieces : " . print_r ( $pieces, TRUE ) . "\n" );
+            $rows[$pieces[0]] = $pieces[0] . "," . trim ( $pieces[1] );
+        }
+        $result['rows'] = $rows;
+    }
+    else
+    {
+    */
+        //$headers = trim ( $pieces[1] );
+        //$data['headers'] .= "," . $headers;
+        $data['headers'] = $pieces[1];
+
+        //while ( ( $line = fgetcsv ( $file_handle, 0, "," ) ) != FALSE )
+        while ( ( $line = fgets ( $file_handle ) ) != FALSE )
+        {
+            $pieces = explode ( ",", $line, 2 );
+            //fwrite ( $debug, "pieces : " . print_r ( $pieces, TRUE ) . "\n" );
+            //$subject = pieces[0]];
+            //fwrite ( $debug, "subject 1 : " . print_r ( $subject, TRUE ) . "\n" );
+            //$subject .= "," . trim ( $pieces[1] );
+            //fwrite ( $debug, "subject 2 : " . print_r ( $subject, TRUE ) . "\n" );
+            $data['rows'][$pieces[0]] = $pieces[1];
+        }
+    //}
+    fwrite ( $debug, "data : " . print_r ( $data, TRUE ) . "\n" );
+
+    return ( $data );
 }
 
 
@@ -600,6 +818,14 @@ function ebd_menu()
         'type' => MENU_CALLBACK,
     );
 
+    $items['combine/%user/%node'] = array (
+        'title' => "Upload",
+        'access arguments' => array ( "Combine data" ),
+        'page callback' => 'ebd_combine',
+        'page arguments' => array ( 1, 2 ),
+        'type' => MENU_CALLBACK,
+    );
+
     $items['upload'] = array (
         'title' => "Upload",
         'access arguments' => array ( "Upload data" ),
@@ -627,8 +853,9 @@ function ebd_permission()
 {
     $permissions = array();
 
-    $permissions =
-        array ( 'Upload data' => array ( 'title' => t ( 'Upload data' ) ),
+    $permissions = array (
+        'Combine data' => array ( 'title' => t ( 'Combine data' ) ),
+        'Upload data' => array ( 'title' => t ( 'Upload data' ) ),
     );
 
     return ( $permissions );
@@ -661,6 +888,9 @@ function ebd_upload_check ( $info, $file )
         return ( $PROBLEM );
     //fwrite ( $debug, "info : " . print_r ( $info, TRUE ) . "\n" );
 
+    // Following setting is needed in case the file came from a PC which
+    // results in newline problem
+    ini_set ( 'auto_detect_line_endings', TRUE );
     $file_handle = fopen ( $file->uri, "r" );
 
     // First, check headers...
@@ -818,7 +1048,7 @@ function ebd_upload_check ( $info, $file )
         //fwrite ( $debug, "key : " . print_r ( $key, TRUE ) . "\n" );
 
         if ( $key === FALSE )
-                $extra_subjects[] = $subjectID;
+            $extra_subjects[] = $subjectID;
         else
         {
             //fwrite ( $debug, "unsetting subject : " . print_r ( $subjectID, TRUE ) . "\n" );
@@ -1119,7 +1349,7 @@ function ebd_upload_multipage_form_submit ( $form, &$form_state )
         else
             drupal_set_message
                 ( "Your upload has been successfully saved.  Thank you!  You may now " .
-                l ( "logout", $EBD_LOGOUT_URL ) );
+                l ( "logout", $EBD_LOGOUT_URL ) . "." );
     }
 
     else
@@ -1379,7 +1609,6 @@ function ebd_upload_save ( $info )
     $age_total = 0;
     $num_females = 0;
     $num_males = 0;
-    //$num_sites = count ( $info['covariates']['entries'][0] ) - 4;
     $num_sites = count ( $info['covariates']['sites'] );
     $num_subjects = count ( $info['covariates']['subjects'] );
 
@@ -1483,6 +1712,7 @@ function ebd_upload_save ( $info )
 
             // If agreement has yes for USC share and allow them to upload,
             // update the uploaded field
+            /*
             if ( isset (
                 $agreement->field_agreements_shared[LANGUAGE_NONE][0]['value'] )
                 && isset (
@@ -1491,6 +1721,11 @@ function ebd_upload_save ( $info )
                 === "1" ) && 
                 ( $agreement->field_agreements_usc[LANGUAGE_NONE][0]['value']
                 === "1" ) )
+            */
+            if ( isset (
+                $agreement->field_agreements_usc[LANGUAGE_NONE][0]['value'] ) &&
+                ( $agreement->field_agreements_usc[LANGUAGE_NONE][0]['value']
+                === "2" ) )
             {
                 //fwrite ( $debug, "updating agreement : " . print_r ( $agreement, TRUE ) . "\n" );
                 $agreement->field_agreements_uploaded =
