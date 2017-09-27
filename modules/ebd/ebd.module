@@ -30,6 +30,9 @@ $EBD_AGREEMENT_STATUS_REDO = 3;
 global $EBD_BLANK_PAGE;
 $EBD_BLANK_PAGE = "node/14";
 
+global $EBD_COMBINE_FILENAME;
+$EBD_COMBINE_FILENAME = "combined.csv";
+
 global $EBD_DEBUG_FILE;
 $EBD_DEBUG_FILE = "/tmp/debug.txt";
 
@@ -349,13 +352,6 @@ function ebd_agreement_form_validate ( $form, &$form_state )
     $values = $form_state['values'];
     //fwrite ( $debug, "values : " . print_r ( $values, TRUE ) . "\n" );
 
-    //drupal_get_messages();
-
-    /*
-    if ( $values['contribute'] === "1" && $values['storing'] === "1" &&
-        $values['additional'] === "0" && $values['shared'] === "1" &&
-    */
-
     if ( $values['contribute'] === "1" && ! isset ( $values['storing'] ) )
         form_set_error ( 'storing', 'Please answer second question...' );
     else if ( $values['contribute'] === "1" && $values['storing'] === "1" &&
@@ -388,34 +384,60 @@ function ebd_combine ( $userx, $node )
         $combined = ebd_file_get_data
             ( $node->field_upload_covariates_file[LANGUAGE_NONE][0]['uri'],
             $combined );
-        //fwrite ( $debug, "combined 1 : " . print_r ( $combined['headers'], TRUE ) . "\n" );
-        /*
+        //fwrite ( $debug, "combined 1 : " . print_r ( $combined, TRUE ) . "\n" );
         $combined = ebd_file_get_data (
             $node->field_upload_surface_file[LANGUAGE_NONE][0]['uri'],
             $combined );
-        fwrite ( $debug, "combined 2 : " . print_r ( $combined['headers'], TRUE ) . "\n" );
+        //fwrite ( $debug, "combined 2 : " . print_r ( $combined, TRUE ) . "\n" );
         $combined = ebd_file_get_data (
             $node->field_upload_thickness_file[LANGUAGE_NONE][0]['uri'],
             $combined );
-        fwrite ( $debug, "combined 3 : " . print_r ( $combined['headers'], TRUE ) . "\n" );
-        */
+        //fwrite ( $debug, "combined 3 : " . print_r ( $combined, TRUE ) . "\n" );
+        $combined = ebd_file_get_data (
+            $node->field_upload_volumes_file[LANGUAGE_NONE][0]['uri'],
+            $combined );
+        //fwrite ( $debug, "combined 4 : " . print_r ( $combined, TRUE ) . "\n" );
+        ebd_combine_save ( $node, $combined );
     }
 
     drupal_goto ( "uploads-list" );
 }
 
 
-function ebd_combine_data ( $data1, $data2 )
+function ebd_combine_save ( &$node, $data )
 {
+    global $EBD_COMBINE_FILENAME;
     global $EBD_DEBUG_FILE;
 
-    $debug = fopen ( $EBD_DEBUG_FILE, "a" );
-    fwrite ( $debug, "entered ebd_combine_data\n" );
-    //fwrite ( $debug, "userx : " . print_r ( $userx, TRUE ) . "\n" );
+    //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    //fwrite ( $debug, "entered ebd_combine_save\n" );
     //fwrite ( $debug, "node : " . print_r ( $node, TRUE ) . "\n" );
+    //fwrite ( $debug, "data : " . print_r ( $data, TRUE ) . "\n" );
 
-    if ( empty ( $data1 ) || empty ( $data2 ) )
-        return ( NULL );
+    if ( empty ( $node ) || empty ( $data ) )
+        return ( null );
+
+    $content = $data['headers'] . "\n";
+    $uri = $node->field_upload_covariates_file[LANGUAGE_NONE][0]['uri'];
+    //fwrite ( $debug, "uri : " . print_r ( $uri, TRUE ) . "\n" );
+    $index = strrpos ( $uri, "/" );
+    $uri_path = substr ( $uri, 0, $index + 1 );
+    //fwrite ( $debug, "uri_path : " . print_r ( $uri_path, TRUE ) . "\n" );
+
+    foreach ( $data['rows'] as $subjid => $value )
+        $content .= $subjid . "," . $value . "\n";
+
+    $file = file_save_data ( $content, $uri_path . $EBD_COMBINE_FILENAME,
+        FILE_EXISTS_REPLACE );
+
+    // file display must be set before saving it to a node
+    $file->display = 1;
+
+    $node->field_upload_combined_file = array ( LANGUAGE_NONE => array (
+        ( array ) $file ) );
+    node_save ( $node );
+
+    return ( $node );
 }
 
 
@@ -591,6 +613,9 @@ function ebd_covariates_check ( $file )
         $entries[] = $entry;
         $line_counter++;
     }
+
+    fclose ( $file_handle );
+
     //fwrite ( $debug, "cont : " . print_r ( $cont, TRUE ) . "\n" );
     //fwrite ( $debug, "data : " . print_r ( $data, TRUE ) . "\n" );
     //fwrite ( $debug, "sites : " . print_r ( $sites, TRUE ) . "\n" );
@@ -694,69 +719,60 @@ function ebd_file_element_process ( $element, &$form_state, $form )
  *          column header strings WITHOUT the SubjID, "rows" => indexed array
  *          ( "<SubjID>" => "<remaining row values>")
  **/
-function ebd_file_get_data ( $uri )
+function ebd_file_get_data ( $uri, $data = null )
 {
     global $EBD_DEBUG_FILE;
 
-    $debug = fopen ( $EBD_DEBUG_FILE, "a" );
-    fwrite ( $debug, "entered ebd_file_get_data\n" );
-    fwrite ( $debug, "uri : " . print_r ( $uri, TRUE ) . "\n" );
+    //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    //fwrite ( $debug, "entered ebd_file_get_data\n" );
+    //fwrite ( $debug, "uri : " . print_r ( $uri, TRUE ) . "\n" );
+    //fwrite ( $debug, "data 1 : " . print_r ( $data, TRUE ) . "\n" );
 
     if ( empty ( $uri ) )
         return ( NULL );
-
-    //$result = $data;
-    $data = array();
 
     // Following setting is needed in case the file came from a PC which
     // results in newline problem
     ini_set ( 'auto_detect_line_endings', TRUE );
     $file_handle = fopen ( $uri, "r" );
     $headers = trim ( fgets ( $file_handle ) );
-    //$headers = fgetcsv ( $file_handle, 0, "," );
-    fwrite ( $debug, "headers : " . print_r ( $headers, TRUE ) . "\n" );
+    //fwrite ( $debug, "headers : " . print_r ( $headers, TRUE ) . "\n" );
 
     // Make sure subject ID is the first column
     $pieces = explode ( ",", $headers, 2 );
-    fwrite ( $debug, "pieces : " . print_r ( $pieces, TRUE ) . "\n" );
+    //fwrite ( $debug, "pieces : " . print_r ( $pieces, TRUE ) . "\n" );
     if ( strcasecmp ( $pieces[0], "SubjID" ) !== 0 )
         return ( NULL );
 
-    $rows = array();
-
-    /*
     if ( empty ( $data ) )
     {
-        $result['headers'] = $pieces[0] . "," . trim ( $pieces[1] );
+        $data['headers'] = $headers;
+        //fwrite ( $debug, "headers : " . print_r ( $headers, TRUE ) . "\n" );
+        $rows = array();
 
         while ( ( $line = fgets ( $file_handle ) ) != FALSE )
         {
             $pieces = explode ( ",", $line, 2 );
-            //fwrite ( $debug, "pieces : " . print_r ( $pieces, TRUE ) . "\n" );
-            $rows[$pieces[0]] = $pieces[0] . "," . trim ( $pieces[1] );
+            $rows[$pieces[0]] = trim ( $pieces[1] );
         }
-        $result['rows'] = $rows;
+        fwrite ( $debug, "rows : " . print_r ( $rows, TRUE ) . "\n" );
+        //$data['rows'] = $rows;
     }
     else
     {
-    */
-        //$headers = trim ( $pieces[1] );
-        //$data['headers'] .= "," . $headers;
-        $data['headers'] = $pieces[1];
+        $data['headers'] .= "," . $pieces[1];
+        $rows = $data['rows'];
 
-        //while ( ( $line = fgetcsv ( $file_handle, 0, "," ) ) != FALSE )
         while ( ( $line = fgets ( $file_handle ) ) != FALSE )
         {
             $pieces = explode ( ",", $line, 2 );
-            //fwrite ( $debug, "pieces : " . print_r ( $pieces, TRUE ) . "\n" );
-            //$subject = pieces[0]];
-            //fwrite ( $debug, "subject 1 : " . print_r ( $subject, TRUE ) . "\n" );
-            //$subject .= "," . trim ( $pieces[1] );
-            //fwrite ( $debug, "subject 2 : " . print_r ( $subject, TRUE ) . "\n" );
-            $data['rows'][$pieces[0]] = $pieces[1];
+            $rows[$pieces[0]] .= "," . trim ( $pieces[1] );
         }
-    //}
-    fwrite ( $debug, "data : " . print_r ( $data, TRUE ) . "\n" );
+    }
+    fclose ( $file_handle );
+
+    $data['rows'] = $rows;
+    //fwrite ( $debug, "data 2 : " . print_r ( $data, TRUE ) . "\n" );
 
     return ( $data );
 }
@@ -1067,6 +1083,9 @@ function ebd_upload_check ( $info, $file )
 
         $line_counter++;
     }
+
+    fclose ( $file_handle );
+
     //fwrite ( $debug, "extra_subjects : " . print_r ( $extra_subjects, TRUE ) . "\n" );
     //fwrite ( $debug, "empty_values : " . print_r ( $empty_values, TRUE ) . "\n" );
 
