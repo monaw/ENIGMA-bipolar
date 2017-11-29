@@ -33,11 +33,102 @@ $EBD_BLANK_PAGE = "node/14";
 global $EBD_COMBINE_FILENAME;
 $EBD_COMBINE_FILENAME = "combined.csv";
 
+global $EBD_DATA_ADMIN_ROLE_ID;
+$EBD_DATA_ADMIN_ROLE_ID = '5';
+
 global $EBD_DEBUG_FILE;
 $EBD_DEBUG_FILE = "/tmp/debug.txt";
 
+global $EBD_HEADER_PI_NAME;
+$EBD_HEADER_PI_NAME = "PI Name";
+
+global $EBD_HEADERS_COVARIATES;
+//$EBD_HEADERS_COVARIATES = array ( "SubjID", "Dx", "Age", "Sex", "FullDx" );
+$EBD_HEADERS_COVARIATES = array ( "SubjID", "Dx", "Age", "Sex" );
+
+global $EBD_HEADERS_LRVOLUMES;
+$EBD_HEADERS_LRVOLUMES = array ( "SubjID", "LLatVent", "RLatVent", "Lthal",
+    "Rthal", "Lcaud", "Rcaud", "Lput", "Rput", "Lpal", "Rpal", "Lhippo",
+    "Rhippo", "Lamyg", "Ramyg", "Laccumb", "Raccumb", "ICV" );
+
+global $EBD_HEADERS_SURFAVG;
+$EBD_HEADERS_SURFAVG = array ( "SubjID", "L_bankssts_surfavg",
+    "L_caudalanteriorcingulate_surfavg", "L_caudalmiddlefrontal_surfavg",
+    "L_cuneus_surfavg", "L_entorhinal_surfavg", "L_fusiform_surfavg",
+    "L_inferiorparietal_surfavg", "L_inferiortemporal_surfavg",
+    "L_isthmuscingulate_surfavg", "L_lateraloccipital_surfavg",
+    "L_lateralorbitofrontal_surfavg", "L_lingual_surfavg",
+    "L_medialorbitofrontal_surfavg", "L_middletemporal_surfavg",
+    "L_parahippocampal_surfavg", "L_paracentral_surfavg",
+    "L_parsopercularis_surfavg", "L_parsorbitalis_surfavg",
+    "L_parstriangularis_surfavg", "L_pericalcarine_surfavg",
+    "L_postcentral_surfavg", "L_posteriorcingulate_surfavg",
+    "L_precentral_surfavg", "L_precuneus_surfavg",
+    "L_rostralanteriorcingulate_surfavg", "L_rostralmiddlefrontal_surfavg",
+    "L_superiorfrontal_surfavg", "L_superiorparietal_surfavg",
+    "L_superiortemporal_surfavg", "L_supramarginal_surfavg",
+    "L_frontalpole_surfavg", "L_temporalpole_surfavg",
+    "L_transversetemporal_surfavg", "L_insula_surfavg",
+    "R_bankssts_surfavg", "R_caudalanteriorcingulate_surfavg",
+    "R_caudalmiddlefrontal_surfavg", "R_cuneus_surfavg",
+    "R_entorhinal_surfavg", "R_fusiform_surfavg", "R_inferiorparietal_surfavg",
+    "R_inferiortemporal_surfavg", "R_isthmuscingulate_surfavg",
+    "R_lateraloccipital_surfavg", "R_lateralorbitofrontal_surfavg",
+    "R_lingual_surfavg", "R_medialorbitofrontal_surfavg",
+    "R_middletemporal_surfavg", "R_parahippocampal_surfavg",
+    "R_paracentral_surfavg", "R_parsopercularis_surfavg",
+    "R_parsorbitalis_surfavg", "R_parstriangularis_surfavg",
+    "R_pericalcarine_surfavg", "R_postcentral_surfavg",
+    "R_posteriorcingulate_surfavg", "R_precentral_surfavg",
+    "R_precuneus_surfavg", "R_rostralanteriorcingulate_surfavg",
+    "R_rostralmiddlefrontal_surfavg", "R_superiorfrontal_surfavg",
+    "R_superiorparietal_surfavg", "R_superiortemporal_surfavg",
+    "R_supramarginal_surfavg", "R_frontalpole_surfavg",
+    "R_temporalpole_surfavg", "R_transversetemporal_surfavg",
+    "R_insula_surfavg", "LThickness", "RThickness", "LSurfArea", "RSurfArea",
+    "ICV" );
+
+global $EBD_HEADERS_THICKAVG;
+$EBD_HEADERS_THICKAVG = array ( "SubjID", "L_bankssts_thickavg",
+    "L_caudalanteriorcingulate_thickavg", "L_caudalmiddlefrontal_thickavg",
+    "L_cuneus_thickavg", "L_entorhinal_thickavg", "L_fusiform_thickavg",
+    "L_inferiorparietal_thickavg", "L_inferiortemporal_thickavg",
+    "L_isthmuscingulate_thickavg", "L_lateraloccipital_thickavg",
+    "L_lateralorbitofrontal_thickavg", "L_lingual_thickavg",
+    "L_medialorbitofrontal_thickavg", "L_middletemporal_thickavg",
+    "L_parahippocampal_thickavg", "L_paracentral_thickavg",
+    "L_parsopercularis_thickavg", "L_parsorbitalis_thickavg",
+    "L_parstriangularis_thickavg", "L_pericalcarine_thickavg",
+    "L_postcentral_thickavg", "L_posteriorcingulate_thickavg",
+    "L_precentral_thickavg", "L_precuneus_thickavg",
+    "L_rostralanteriorcingulate_thickavg", "L_rostralmiddlefrontal_thickavg",
+    "L_superiorfrontal_thickavg", "L_superiorparietal_thickavg",
+    "L_superiortemporal_thickavg", "L_supramarginal_thickavg",
+    "L_frontalpole_thickavg", "L_temporalpole_thickavg",
+    "L_transversetemporal_thickavg", "L_insula_thickavg", "R_bankssts_thickavg",
+    "R_caudalanteriorcingulate_thickavg", "R_caudalmiddlefrontal_thickavg",
+    "R_cuneus_thickavg", "R_entorhinal_thickavg", "R_fusiform_thickavg",
+    "R_inferiorparietal_thickavg", "R_inferiortemporal_thickavg",
+    "R_isthmuscingulate_thickavg", "R_lateraloccipital_thickavg",
+    "R_lateralorbitofrontal_thickavg", "R_lingual_thickavg",
+    "R_medialorbitofrontal_thickavg", "R_middletemporal_thickavg",
+    "R_parahippocampal_thickavg", "R_paracentral_thickavg",
+    "R_parsopercularis_thickavg", "R_parsorbitalis_thickavg",
+    "R_parstriangularis_thickavg", "R_pericalcarine_thickavg",
+    "R_postcentral_thickavg", "R_posteriorcingulate_thickavg",
+    "R_precentral_thickavg", "R_precuneus_thickavg",
+    "R_rostralanteriorcingulate_thickavg", "R_rostralmiddlefrontal_thickavg",
+    "R_superiorfrontal_thickavg", "R_superiorparietal_thickavg",
+    "R_superiortemporal_thickavg", "R_supramarginal_thickavg",
+    "R_frontalpole_thickavg", "R_temporalpole_thickavg",
+    "R_transversetemporal_thickavg", "R_insula_thickavg", "LThickness",
+    "RThickness", "LSurfArea", "RSurfArea", "ICV" );
+
 global $EBD_LOGOUT_URL;
 $EBD_LOGOUT_URL = "user/logout";
+
+global $EBD_MASTER_FILENAME;
+$EBD_MASTER_FILENAME = "masterfile.csv";
 
 global $EBD_PRIVATE_URI_PREFIX;
 $EBD_PRIVATE_URI_PREFIX = "private://csv/";
@@ -60,6 +151,97 @@ $EBD_UPLOAD_STEPS = array ( 1 => "covariates", 2 => "SurfAvg", 3 => "ThickAvg",
 
 global $EBD_UPLOAD_URL;
 $EBD_UPLOAD_URL = "upload";
+
+
+/**
+ * Generate the age data for the given upload node by reading the covariates
+ * file and counting number of entries per age
+ **/
+function ebd_age_data_generate ( $node )
+{
+    global $user;
+    global $EBD_COMBINE_FILENAME;
+    global $EBD_DEBUG_FILE;
+
+    //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    //fwrite ( $debug, "entered ebd_age_data_generate\n" );
+    //fwrite ( $debug, "node : " . print_r ( $node, TRUE ) . "\n" );
+
+    if ( empty ( $node->field_upload_covariates_file ) )
+    {
+        drupal_set_message ( "ERROR : missing coviates file for PI " .
+            $node->title, 'error' );
+        drupal_goto ( "uploads-list" );
+    }
+
+    //$file = $node->field_upload_covariates_file[LANGUAGE_NONE][0]['uri'];
+    //fwrite ( $debug, "file : " . print_r ( $file, TRUE ) . "\n" );
+    $pi = $node->title;
+    //fwrite ( $debug, "pi : " . print_r ( $pi, TRUE ) . "\n" );
+
+    // Following setting is needed in case the file came from a PC which
+    // results in newline problem
+    ini_set ( 'auto_detect_line_endings', TRUE );
+    $file_handle = fopen ( $file, "r" );
+
+    // First, check header
+    $age_index = -1;
+    $gender_index = -1;
+    $headers = fgetcsv ( $file_handle, 0, "," );
+    //fwrite ( $debug, "headers : " . print_r ( $headers, TRUE ) . "\n" );
+
+    foreach ( $headers as $index => $header )
+    {
+        //fwrite ( $debug, "index : " . print_r ( $index, TRUE ) . "\n" );
+        //fwrite ( $debug, "header : " . print_r ( $header, TRUE ) . "\n" );
+
+        if ( strcasecmp ( $header, "Age" ) === 0 )
+            $age_index = $index;
+        else if ( strcasecmp ( $header, "Sex" ) === 0 )
+            $gender_index = $index;
+    }
+    //fwrite ( $debug, "age_index : " . print_r ( $age_index, TRUE ) . "\n" );
+    //fwrite ( $debug, "gender_index : " . print_r ( $gender_index, TRUE ) . "\n" );
+
+    $data = array();
+
+    // Now check and save each line...
+    while ( ( $line = fgetcsv ( $file_handle, 0, "," ) ) != FALSE )
+    {
+        //fwrite ( $debug, "line : " . print_r ( $line, TRUE ) . "\n" );
+
+        $age = round ( $line[$age_index] );
+        $gender = $line[$gender_index];
+
+        if ( empty ( $data[$age] ) )
+            $data[$age] = array ( "M" => 0, "F" => 0 );
+
+        if ( $gender == '1' )
+            $data[$age]['M'] += 1;
+        else if ( $gender == '2' )
+            $data[$age]['F']++;
+    }
+    //fwrite ( $debug, "data : " . print_r ( $data, TRUE ) . "\n" );
+
+    foreach ( $data as $age => $genders )
+    {
+        $new_node = new stdClass();
+        $new_node->type = "age";
+        $new_node->title = $pi;
+        $new_node->is_new = TRUE;
+        $new_node->uid = $user->uid;
+        $new_node->status = 1;
+        $new_node->field_age_age = ebd_value_field_create ( $age );
+        $new_node->field_age_females = ebd_value_field_create ( $genders['F'] );
+        $new_node->field_age_males = ebd_value_field_create ( $genders['M'] );
+        //fwrite ( $debug, "new_node : " . print_r ( $new_node, TRUE ) . "\n" );
+        node_save ( $new_node );
+    }
+
+    drupal_set_message ( count ( $data ) . " age data generated", 'status' ); 
+
+    drupal_goto ( "uploads-list" );
+}
 
 
 /**
@@ -191,38 +373,6 @@ function ebd_agreement_form ( $form, &$form_state )
         ),
     );
 
-    /*
-    $form['shared'] = array (
-        '#title' => 'Have you already shared CorticalMeasuresENIGMA_SurfAvg.csv, CorticalMeasuresENIGMA_ThickAvg.csv, LandRVolumes.csv, and covariates.csv with the USC group?',
-        '#options' => array ( '1' => 'Yes', '0' => 'No' ),
-        '#type' => 'radios',
-        '#states' => array (
-            'visible' =>
-                array ( ':input[name="contribute"]' => array ( 'value' => '1' ),
-
-                    ':input[name="storing"]' => array ( 'value' => '1' ),
-                    ':input[name="additional"]' => array ( 'value' => '0' ) ),
-
-        ),
-    );
-
-    $form['usc'] = array (
-        '#title' => 'Do you agree to have the USC group share these data with the brain age project directly instead of uploading them yourself?',
-        '#options' => array ( '1' => 'Yes', '0' => 'No' ),
-        '#type' => 'radios',
-        '#states' => array (
-            'visible' => array (
-                ':input[name="contribute"]' => array ( 'value' => '1' ),
-                ':input[name="storing"]' => array ( 'value' => '1' ),
-                ':input[name="additional"]' => array ( 'value' => '0' ),
-                ':input[name="shared"]' => array ( 'value' => '1' ),
-            ),
-            'required' =>
-                array ( ':input[name="shared"]' => array ( 'value' => '1' ) ),
-        ),
-    );
-    */
-
     $form['usc'] = array (
         '#title' => 'Do you give permission for USC to upload the required files for the brain age analysis (CorticalMeasuresENIGMA_SurfAvg.csv, CorticalMeasuresENIGMA_ThickAvg.csv, LandRVolumes.csv, and covariates.csv) on your behalf?  If you select "yes", you will need to work with Chris Ching at USC to make sure that he has all the necessary files, and then his group will perform the upload process for you. Select one of the "no" answers if you have the files ready to contribute yourself and would rather not go through the intermediary of USC.',
         '#options' => array ( '2' => 'Yes',
@@ -279,10 +429,6 @@ function ebd_agreement_form_submit ( $form, &$form_state )
             l ( "logout", $EBD_LOGOUT_URL ) . ".  Thank you." );
         $userx->field_user_agreement_status = ebd_value_field_create
             ( $EBD_AGREEMENT_STATUS_NO );
-        /*
-        $userx->field_user_agreement_status[LANGUAGE_NONE][0]['value'] =
-            $EBD_AGREEMENT_STATUS_NO;
-        */
         user_save ( $userx );
         drupal_goto ( $EBD_BLANK_PAGE );
     }
@@ -294,10 +440,6 @@ function ebd_agreement_form_submit ( $form, &$form_state )
             l ( "logout", $EBD_LOGOUT_URL ) . ".  Thank you." );
         $userx->field_user_agreement_status = ebd_value_field_create 
             ( $EBD_AGREEMENT_STATUS_NO );
-        /*
-        $userx->field_user_agreement_status[LANGUAGE_NONE][0]['value'] =
-            $EBD_AGREEMENT_STATUS_NO;
-        */
         user_save ( $userx );
         drupal_goto ( $EBD_BLANK_PAGE );
     }
@@ -309,10 +451,6 @@ function ebd_agreement_form_submit ( $form, &$form_state )
             l ( "logout", $EBD_LOGOUT_URL ) . ".  Thank you.", 'warning' );
         $userx->field_user_agreement_status = ebd_value_field_create
             ( $EBD_AGREEMENT_STATUS_REDO );
-        /*
-        $userx->field_user_agreement_status[LANGUAGE_NONE][0]['value'] =
-            $EBD_AGREEMENT_STATUS_REDO;
-        */
         user_save ( $userx );
         drupal_goto ( $EBD_BLANK_PAGE );
     }
@@ -325,10 +463,6 @@ function ebd_agreement_form_submit ( $form, &$form_state )
             l ( "logout", $EBD_LOGOUT_URL ) . "." );
         $userx->field_user_agreement_status = ebd_value_field_create
             ( $EBD_AGREEMENT_STATUS_OK );
-        /*
-        $userx->field_user_agreement_status[LANGUAGE_NONE][0]['value'] =
-            $EBD_AGREEMENT_STATUS_OK;
-        */
         user_save ( $userx );
         drupal_goto ( $EBD_BLANK_PAGE );
     }
@@ -365,42 +499,161 @@ function ebd_agreement_form_validate ( $form, &$form_state )
 
 /**
  * This is the callback function for combining user upload data files for a
- * single PI
+ * single PI.  It can be used by either the UI or another function (set $ui
+ * parameter to false)
+ * @param $node - upload node
+ * @param $ui - true (default) if need user-interface interactions; false if
+ *      called by a function and no user-interface interaction is needed
+ * @return true if successful; false otherwise
  **/
-function ebd_combine ( $userx, $node )
+function ebd_combine ( $node, $ui = true )
 {
+    global $EBD_COMBINE_FILENAME;
     global $EBD_DEBUG_FILE;
 
     //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
     //fwrite ( $debug, "entered ebd_combine\n" );
-    //fwrite ( $debug, "userx : " . print_r ( $userx, TRUE ) . "\n" );
     //fwrite ( $debug, "node : " . print_r ( $node, TRUE ) . "\n" );
 
-    if ( empty ( $userx ) || empty ( $node ) )
-        drupal_set_message ( "Invalid user or upload info!", 'error' );
-    else
+    if ( empty ( $node ) )
     {
-        $combined = array();
-        $combined = ebd_file_get_data
-            ( $node->field_upload_covariates_file[LANGUAGE_NONE][0]['uri'],
-            $combined );
-        //fwrite ( $debug, "combined 1 : " . print_r ( $combined, TRUE ) . "\n" );
-        $combined = ebd_file_get_data (
-            $node->field_upload_surface_file[LANGUAGE_NONE][0]['uri'],
-            $combined );
-        //fwrite ( $debug, "combined 2 : " . print_r ( $combined, TRUE ) . "\n" );
-        $combined = ebd_file_get_data (
-            $node->field_upload_thickness_file[LANGUAGE_NONE][0]['uri'],
-            $combined );
-        //fwrite ( $debug, "combined 3 : " . print_r ( $combined, TRUE ) . "\n" );
-        $combined = ebd_file_get_data (
-            $node->field_upload_volumes_file[LANGUAGE_NONE][0]['uri'],
-            $combined );
-        //fwrite ( $debug, "combined 4 : " . print_r ( $combined, TRUE ) . "\n" );
-        ebd_combine_save ( $node, $combined );
+        if ( $ui )
+            drupal_set_message ( "Invalid upload info!", 'error' );
+        else
+            return ( false );
     }
 
-    drupal_goto ( "uploads-list" );
+    $combined = array();
+    $combined = ebd_combine_get_data (
+        $node->field_upload_covariates_file[LANGUAGE_NONE][0]['uri'],
+        $combined );
+    //fwrite ( $debug, "combined 1 : " . print_r ( $combined, TRUE ) . "\n" );
+    if ( empty ( $combined ) )
+    {
+        if ( $ui )
+            drupal_set_message ( "Error combining covariate file!" );
+        else
+            return ( false );
+    }
+
+    $combined = ebd_combine_get_data (
+            $node->field_upload_surface_file[LANGUAGE_NONE][0]['uri'],
+            $combined );
+    //fwrite ( $debug, "combined 2 : " . print_r ( $combined, TRUE ) . "\n" );
+    if ( empty ( $combined ) )
+    {
+        if ( $ui )
+            drupal_set_message ( "Error combining surface file!" );
+        else
+            return ( false );
+    }
+
+    $combined = ebd_combine_get_data (
+        $node->field_upload_thickness_file[LANGUAGE_NONE][0]['uri'],
+        $combined );
+    //fwrite ( $debug, "combined 3 : " . print_r ( $combined, TRUE ) . "\n" );
+    if ( empty ( $combined ) )
+    {
+        if ( $ui )
+            drupal_set_message ( "Error combining thickness file!" );
+        else
+            return ( false );
+    }
+
+    $combined = ebd_combine_get_data (
+        $node->field_upload_volumes_file[LANGUAGE_NONE][0]['uri'], $combined );
+    //fwrite ( $debug, "combined 4 : " . print_r ( $combined, TRUE ) . "\n" );
+    if ( empty ( $combined ) )
+    {
+        if ( $ui )
+            drupal_set_message ( "Error combining volume file!" );
+        else
+            return ( false );
+    }
+
+    if ( empty ( ebd_combine_save ( $node, $combined ) ) )
+    {
+        if ( $ui )
+            drupal_set_message ( "Error saving combined file!" );
+        else
+            return ( false );
+    }
+
+    if ( $ui )
+    {
+        drupal_set_message ( "Successfully created " . $EBD_COMBINE_FILENAME .
+            " for PI " . $node->title );
+        drupal_goto ( "uploads-list" );
+    }
+    else
+        return ( true );
+}
+
+
+/**
+ * Read the file at the given uri.  This function assumes the subject ID is
+ * the first column.
+ * @return  NULL if there is a problem getting the data from the file;
+ *          otherwise return a nested indexed array ( "header" =>
+ *          column header strings WITHOUT the SubjID, "rows" => indexed array
+ *          ( "<SubjID>" => "<remaining row values>")
+ **/
+function ebd_combine_get_data ( $uri, $data = null )
+{
+    global $EBD_DEBUG_FILE;
+
+    //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    //fwrite ( $debug, "entered ebd_combine_get_data\n" );
+    //fwrite ( $debug, "uri : " . print_r ( $uri, TRUE ) . "\n" );
+    //fwrite ( $debug, "data 1 : " . print_r ( $data, TRUE ) . "\n" );
+
+    if ( empty ( $uri ) )
+        return ( NULL );
+
+    // Following setting is needed in case the file came from a PC which
+    // results in newline problem
+    ini_set ( 'auto_detect_line_endings', TRUE );
+    $file_handle = fopen ( $uri, "r" );
+    $headers = trim ( fgets ( $file_handle ) );
+    //fwrite ( $debug, "headers : " . print_r ( $headers, TRUE ) . "\n" );
+
+    // Make sure subject ID is the first column
+    $pieces = explode ( ",", $headers, 2 );
+    //fwrite ( $debug, "pieces : " . print_r ( $pieces, TRUE ) . "\n" );
+    if ( strcasecmp ( $pieces[0], "SubjID" ) !== 0 )
+        return ( NULL );
+
+    if ( empty ( $data ) )
+    {
+        $data['headers'] = $headers;
+        //fwrite ( $debug, "headers : " . print_r ( $headers, TRUE ) . "\n" );
+        $rows = array();
+
+        while ( ( $line = fgets ( $file_handle ) ) != FALSE )
+        {
+            $pieces = explode ( ",", $line, 2 );
+            $rows[$pieces[0]] = trim ( $pieces[1] );
+        }
+        //fwrite ( $debug, "rows : " . print_r ( $rows, TRUE ) . "\n" );
+        //$data['rows'] = $rows;
+    }
+    else
+    {
+        $data['headers'] .= "," . $pieces[1];
+        $rows = $data['rows'];
+
+        while ( ( $line = fgets ( $file_handle ) ) != FALSE )
+        {
+            $pieces = explode ( ",", $line, 2 );
+            $rows[$pieces[0]] .= "," . trim ( $pieces[1] );
+        }
+    }
+    fclose ( $file_handle );
+
+    $data['rows'] = $rows;
+    //fwrite ( $debug, "data 2 : " . print_r ( $data, TRUE ) . "\n" );
+
+    return ( $data );
 }
 
 
@@ -617,7 +870,7 @@ function ebd_covariates_check ( $file )
     fclose ( $file_handle );
 
     //fwrite ( $debug, "cont : " . print_r ( $cont, TRUE ) . "\n" );
-    //fwrite ( $debug, "data : " . print_r ( $data, TRUE ) . "\n" );
+    //fwrite ( $debug, "entries : " . print_r ( $entries, TRUE ) . "\n" );
     //fwrite ( $debug, "sites : " . print_r ( $sites, TRUE ) . "\n" );
 
     if ( empty ( $subjects ) )
@@ -692,6 +945,38 @@ function ebd_covariates_get_data ( $uri )
 
 
 /**
+ * Implements hook_file_download
+ *
+ * Only checks for the master file, no other.  If the user has the
+ * data administrator role, will give access by returning the mime type;
+ * otherwise return NULL which means this module does not manage the file. 
+ **/
+function ebd_file_download ( $uri )
+{
+    global $user;
+    global $EBD_DEBUG_FILE;
+    global $EBD_MASTER_FILENAME;
+    global $EBD_PRIVATE_URI_PREFIX;
+
+    //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    //fwrite ( $debug, "entered ebd_file_download\n" );
+    //fwrite ( $debug, "user : " . print_r ( $user, TRUE ) . "\n" );
+    //fwrite ( $debug, "uri : " . print_r ( $uri, TRUE ) . "\n" );
+
+    if ( $uri == $EBD_PRIVATE_URI_PREFIX . $EBD_MASTER_FILENAME &&
+        user_has_role ( 5 ) )
+    {
+        $mimetype = file_get_mimetype ( $uri );
+        //fwrite ( $debug, "mimetype : " . print_r ( $mimetype, TRUE ) . "\n" );
+
+        return ( array ( 'Content-Type' => $mimetype ) );
+    }
+    else
+        return ( NULL );
+}
+
+
+/**
  * Remove the unneeded upload button on the file upload forms
  **/
 function ebd_file_element_process ( $element, &$form_state, $form )
@@ -708,73 +993,6 @@ function ebd_file_element_process ( $element, &$form_state, $form )
     //fwrite ( $debug, "element 2 : " . print_r ( $element, TRUE ) . "\n" );
 
     return ( $element );
-}
-
-
-/**
- * Read the file at the given uri.  This function assumes the subject ID is
- * the first column.
- * @return  NULL if there is a problem getting the data from the file;
- *          otherwise return a nested indexed array ( "header" =>
- *          column header strings WITHOUT the SubjID, "rows" => indexed array
- *          ( "<SubjID>" => "<remaining row values>")
- **/
-function ebd_file_get_data ( $uri, $data = null )
-{
-    global $EBD_DEBUG_FILE;
-
-    //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
-    //fwrite ( $debug, "entered ebd_file_get_data\n" );
-    //fwrite ( $debug, "uri : " . print_r ( $uri, TRUE ) . "\n" );
-    //fwrite ( $debug, "data 1 : " . print_r ( $data, TRUE ) . "\n" );
-
-    if ( empty ( $uri ) )
-        return ( NULL );
-
-    // Following setting is needed in case the file came from a PC which
-    // results in newline problem
-    ini_set ( 'auto_detect_line_endings', TRUE );
-    $file_handle = fopen ( $uri, "r" );
-    $headers = trim ( fgets ( $file_handle ) );
-    //fwrite ( $debug, "headers : " . print_r ( $headers, TRUE ) . "\n" );
-
-    // Make sure subject ID is the first column
-    $pieces = explode ( ",", $headers, 2 );
-    //fwrite ( $debug, "pieces : " . print_r ( $pieces, TRUE ) . "\n" );
-    if ( strcasecmp ( $pieces[0], "SubjID" ) !== 0 )
-        return ( NULL );
-
-    if ( empty ( $data ) )
-    {
-        $data['headers'] = $headers;
-        //fwrite ( $debug, "headers : " . print_r ( $headers, TRUE ) . "\n" );
-        $rows = array();
-
-        while ( ( $line = fgets ( $file_handle ) ) != FALSE )
-        {
-            $pieces = explode ( ",", $line, 2 );
-            $rows[$pieces[0]] = trim ( $pieces[1] );
-        }
-        fwrite ( $debug, "rows : " . print_r ( $rows, TRUE ) . "\n" );
-        //$data['rows'] = $rows;
-    }
-    else
-    {
-        $data['headers'] .= "," . $pieces[1];
-        $rows = $data['rows'];
-
-        while ( ( $line = fgets ( $file_handle ) ) != FALSE )
-        {
-            $pieces = explode ( ",", $line, 2 );
-            $rows[$pieces[0]] .= "," . trim ( $pieces[1] );
-        }
-    }
-    fclose ( $file_handle );
-
-    $data['rows'] = $rows;
-    //fwrite ( $debug, "data 2 : " . print_r ( $data, TRUE ) . "\n" );
-
-    return ( $data );
 }
 
 
@@ -822,10 +1040,296 @@ function ebd_get_pi_by_uid ( $userid )
 
 
 /**
+ * Page callback for "masterfile/download" sub-URL.  The masterfile.csv needs
+ * special handling because it is not attached to any node so cannot be
+ * downloaded like other uploaded files.
+ **/
+function ebd_masterfile_download()
+{
+    global $user;
+    global $EBD_DEBUG_FILE;
+    global $EBD_MASTER_FILENAME;
+    global $EBD_PRIVATE_URI_PREFIX;
+
+    //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    //fwrite ( $debug, "entered ebd_masterfile_download\n" );
+
+    $file_uri = $EBD_PRIVATE_URI_PREFIX . $EBD_MASTER_FILENAME;
+    //fwrite ( $debug, "file_uri : " . print_r ( $file_uri, TRUE ) . "\n" );
+    $files = entity_load ( 'file', FALSE, array ( 'uri' => $file_uri ) );
+    //fwrite ( $debug, "files : " . print_r ( $files, TRUE ) . "\n" );
+    $file = reset ( $files );
+    //fwrite ( $debug, "file : " . print_r ( $file, TRUE ) . "\n" );
+    $headers = array (
+        'Content-Type' => 'force-download',
+        'Content-Disposition' => 'attachment; filename="' .
+            $EBD_MASTER_FILENAME . '"',
+        'Content-Length' => $file->filesize,
+        'Content-Transfer-Encoding' => 'binary',
+        'Pragma' => 'no-cache',
+        'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+        'Expires' => '0',
+        'Accept-Ranges' => 'bytes'
+    );
+    //fwrite ( $debug, "headers : " . print_r ( $headers, TRUE ) . "\n" );
+
+    file_transfer ( $file_uri, $headers );
+}
+
+
+/**
+ * Page callback for "masterfile/generate" sub-URL.
+ **/
+function ebd_masterfile_generate()
+{
+    global $EBD_COMBINE_FILENAME;
+    global $EBD_DEBUG_FILE;
+    global $EBD_HEADER_PI_NAME;
+    global $EBD_HEADERS_COVARIATES;
+    global $EBD_HEADERS_LRVOLUMES;
+    global $EBD_HEADERS_SURFAVG;
+    global $EBD_HEADERS_THICKAVG;
+    global $EBD_MASTER_FILENAME;
+    global $EBD_PRIVATE_URI_PREFIX;
+    global $user;
+
+    //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    //fwrite ( $debug, "entered ebd_masterfile_generate\n" );
+    //fwrite ( $debug, "master file : " . print_r ( $EBD_PRIVATE_URI_PREFIX . $EBD_MASTER_FILENAME, TRUE ) . "\n" );
+
+    // Gather all the column headers
+    $column_headers = array_merge ( array ( $EBD_HEADER_PI_NAME ),
+        $EBD_HEADERS_COVARIATES, array_slice ( $EBD_HEADERS_SURFAVG, 1 ),
+        array_slice ( $EBD_HEADERS_THICKAVG, 1 ),
+        array_slice ( $EBD_HEADERS_LRVOLUMES, 1 ) );
+    //fwrite ( $debug, "column_headers : " . print_r ( $column_headers, TRUE ) . "\n" );
+    $masterfile_data = array_flip ( $column_headers );
+    //fwrite ( $debug, "masterfile_data : " . print_r ( $masterfile_data, TRUE ) . "\n" );
+    $new_masterfile = true;
+
+    $query = "SELECT * FROM node WHERE type='uploads'";
+    $result = db_query ( $query );
+    //$count = 1;
+
+    // Go through each uploads...
+    foreach ( $result as $record )
+    {
+        //fwrite ( $debug, "record : " . print_r ( $record, TRUE ) . "\n" );
+        $node = node_load ( $record->nid );
+        //fwrite ( $debug, "node : " . print_r ( $node, TRUE ) . "\n" );
+        //fwrite ( $debug, "PI : " . print_r ( $node->title, TRUE ) . "\n" );
+
+        // If no combine file, create it first
+        if ( empty ( $node->field_upload_combined_file ) )
+        {
+            $combined = ebd_combine ( $node, false );
+            //fwrite ( $debug, "combined : " . print_r ( $combined, TRUE ) . "\n" );
+            if ( $combined )
+                drupal_set_message ( "Successfully create missing " .
+                    $EBD_COMBINE_FILENAME . " for PI " . $node->title );
+            else
+                drupal_set_message ( "Unable to create missing " .
+                    $EBD_COMBINE_FILENAME . " for PI " . $node->title .
+                    ". Upload skipped!", "warning" );
+
+            $node = node_load ( $node->nid );
+        }
+
+        /* read entire file into string
+        $content = file_get_contents
+            ( $node->field_upload_combined_file[LANGUAGE_NONE][0]['uri'] );
+        fwrite ( $debug, "content : " . print_r ( $content, TRUE ) . "\n" );
+        */
+
+        // Get the data from the combined file
+        $new_data = ebd_masterfile_get_data ( $node->title, 
+            $node->field_upload_combined_file[LANGUAGE_NONE][0]['uri'] );
+        //fwrite ( $debug, "new_data : " . print_r ( $new_data, TRUE ) . "\n" );
+
+        if ( $new_masterfile )
+        {
+            //fwrite ( $debug, "new masterfile\n" );
+            foreach ( $masterfile_data as $key => $value )
+            {
+                $masterfile_data[$key] = $new_data[$key];
+                unset ( $new_data[$key] );
+            }
+            //fwrite ( $debug, "masterfile_data : " . print_r ( $masterfile_data, TRUE ) . "\n" );
+            //fwrite ( $debug, "new_data : " . print_r ( $new_data, TRUE ) . "\n" );
+
+            $new_masterfile = false;
+        }
+        else
+        {
+            //fwrite ( $debug, "not new masterfile\n" );
+            foreach ( $masterfile_data as $key => $value )
+            {
+                if ( empty ( $new_data[$key] ) )
+                    drupal_set_message ( "PI " . $node->title .
+                        " data is missing column " . $key, "error" );
+                else
+                {
+                    $masterfile_data[$key] = array_merge
+                        ( $masterfile_data[$key], $new_data[$key] );
+                    unset ( $new_data[$key] );
+                }
+            }
+            //break;
+        }
+
+        if ( ! empty ( $new_data ) )
+        {
+            //fwrite ( $debug, "new_data keys : " . print_r ( array_keys ( $new_data ), TRUE ) . "\n" );
+            $xcolumns = implode ( ", ", array_keys ( $new_data ) );
+            drupal_set_message ( "PI " . $node->title . " data contains " .
+                count ( $new_data ) . " extra column(s) : " . $xcolumns .
+                ", ignored", "warning" );
+        }
+
+        /*
+        $count++;
+
+        if ( $count == 3 )
+            break;
+        */
+    }
+    //fwrite ( $debug, "masterfile_data : " . print_r ( $masterfile_data, TRUE ) . "\n" );
+
+    // Output and save to master file
+    $masterfile_uri = $EBD_PRIVATE_URI_PREFIX . $EBD_MASTER_FILENAME;
+    $masterfile_handle = fopen ( $masterfile_uri, "w" );
+    $headers = array_keys ( $masterfile_data );
+    fwrite ( $masterfile_handle, implode ( ",", $headers ) . "\n" );
+    $max_subject_index = count ( $masterfile_data[$EBD_HEADER_PI_NAME] ) - 1;
+    //fwrite ( $debug, "max_subject_index : " . print_r ( $max_subject_index, TRUE ) . "\n" );
+
+    for ( $i = 0; $i < $max_subject_index; $i++ )
+    {
+        $first = true;
+        $line = "";
+
+        foreach ( $masterfile_data as $key => $value )
+            if ( $first )
+            {
+                $line = $value[$i];
+                $first = false;
+            }
+            else
+                $line .= "," . $value[$i];
+
+        fwrite ( $masterfile_handle, $line . "\n" );
+        //break;
+    }
+    $result = fclose ( $masterfile_handle );
+
+    /* Create the masterfile object and tell Drupal about it.  This needed to
+       be done only once...ever!  Since it has been done already, hence the
+       code is commented out but I've left the code here in case the Drupal
+       file ever gets deleted.  The master file is now in Drupal's DB and can
+       be overwritten as needed...no need to update the DB entry.  Also, did
+       not set the file size because it may change
+    // Create the master file entry
+    $file = new stdClass();
+    $file->uid = $user->uid;
+    $file->filename = $EBD_MASTER_FILENAME;
+    $file->uri = $EBD_PRIVATE_URI_PREFIX . $EBD_MASTER_FILENAME;
+    $file->status = FILE_STATUS_PERMANENT;
+    $file->filemime = "text/csv";
+    //$file->size = filesize ( $file->uri );
+    $file = file_save ( $file );
+    fwrite ( $debug, "saved file : " . print_r ( $file, TRUE ) . "\n" );
+    */
+
+    $masterfile_size = filesize ( $masterfile_uri );
+    //fwrite ( $debug, "masterfile_size : " . print_r ( $masterfile_size, TRUE ) . "\n" );
+    $files = entity_load ( 'file', FALSE, array ( 'uri' => $masterfile_uri ) );
+    //fwrite ( $debug, "files : " . print_r ( $files, TRUE ) . "\n" );
+    $file = reset ( $files );
+    //fwrite ( $debug, "file : " . print_r ( $file, TRUE ) . "\n" );
+    $file->filesize = $masterfile_size;
+    file_save ( $file );
+    //fwrite ( $debug, "saved file : " . print_r ( $file, TRUE ) . "\n" );
+
+    if ( $result )
+        drupal_set_message ( "Successfully updated " . $EBD_MASTER_FILENAME );
+
+    drupal_goto ( "uploads-list" );
+}
+
+
+/**
+ * Read the file at given uri and parse data
+ * @param $uri - URI of the combined data
+ * @return null if either arguments is empty; otherwise a key/value array
+ *      where the key is the column title and the value is an array of data
+ *      values (in the same order)
+ **/
+function ebd_masterfile_get_data ( $pi_name, $uri )
+{
+    global $EBD_DEBUG_FILE;
+    global $EBD_HEADER_PI_NAME;
+
+    //$debug = fopen ( $EBD_DEBUG_FILE, "a" );
+    //fwrite ( $debug, "entered ebd_masterfile_get_data\n" );
+
+    if ( empty ( $pi_name ) || empty ( $uri ) )
+        return ( null );
+
+    $file_handle = fopen ( $uri, "r" );
+
+    // First, check headers...
+    $headers = fgetcsv ( $file_handle, 0, "," );
+    //fwrite ( $debug, "headers 1 : " . print_r ( $headers, TRUE ) . "\n" );
+    array_unshift ( $headers, $EBD_HEADER_PI_NAME );
+    //fwrite ( $debug, "headers 2 : " . print_r ( $headers, TRUE ) . "\n" );
+    $ncolumns = count ( $headers );
+    //fwrite ( $debug, "ncolumns : " . print_r ( $ncolumns, TRUE ) . "\n" );
+    $all = array ( $headers );
+    //fwrite ( $debug, "all 1 : " . print_r ( $all, TRUE ) . "\n" );
+
+    while ( ( $line = fgetcsv ( $file_handle, 0, "," ) ) != FALSE )
+    {
+        //fwrite ( $debug, "line 1 : " . print_r ( $line, TRUE ) . "\n" );
+        array_unshift ( $line, $pi_name );
+        //fwrite ( $debug, "line 2 : " . print_r ( $line, TRUE ) . "\n" );
+        $all = array_merge ( $all, array ( $line ) );
+        //fwrite ( $debug, "all : " . print_r ( $all, TRUE ) . "\n" );
+        //$pieces = explode ( ",", $line, 2 );
+        //$rows[$pieces[0]] = trim ( $pieces[1] );
+        //break;
+    }
+    //fwrite ( $debug, "all 3 : " . print_r ( $all, TRUE ) . "\n" );
+
+    // Now created the nested array indexed by the column header
+    $data = array();
+    for ( $i = 0; $i < $ncolumns; $i++ )
+    {
+        $column = array_column ( $all, $i );
+        //fwrite ( $debug, "column 1 : " . print_r ( $column, TRUE ) . "\n" );
+        $name = array_shift ( $column );
+        //fwrite ( $debug, "name : " . print_r ( $name, TRUE ) . "\n" );
+        //fwrite ( $debug, "column 2 : " . print_r ( $column, TRUE ) . "\n" );
+        $data[$name] = $column;
+        /*
+        if ( $i == 2 )
+            break;
+        */
+    }
+    //fwrite ( $debug, "data : " . print_r ( $data, TRUE ) . "\n" );
+
+    fclose ( $file_handle );
+
+    return ( $data );
+}
+
+
+/**
  * Implements hook_menu
  **/
 function ebd_menu()
 {
+    global $EBD_DATA_ADMIN_ROLE_ID;
+
     $items['agreement'] = array (
         'title' => "Agreement",
         'access arguments' => array ( "Upload data" ),
@@ -834,11 +1338,36 @@ function ebd_menu()
         'type' => MENU_CALLBACK,
     );
 
-    $items['combine/%user/%node'] = array (
+    $items['combine/%node'] = array (
         'title' => "Upload",
         'access arguments' => array ( "Combine data" ),
         'page callback' => 'ebd_combine',
-        'page arguments' => array ( 1, 2 ),
+        'page arguments' => array ( 1 ),
+        'type' => MENU_CALLBACK,
+    );
+
+    $items['generate_age_data/%node'] = array (
+        'title' => "Upload",
+        'access arguments' => array ( "Generate age data" ),
+        'page callback' => 'ebd_age_data_generate',
+        'page arguments' => array ( 1 ),
+        'type' => MENU_CALLBACK,
+    );
+
+    $items['masterfile/download'] = array (
+        'title' => "Download master file",
+        'access callback' => "user_has_role",
+        'access arguments' => array ( $EBD_DATA_ADMIN_ROLE_ID ),
+        'page callback' => 'ebd_masterfile_download',
+        //'page arguments' => array ( 1, 2 ),
+        'type' => MENU_CALLBACK,
+    );
+
+    $items['masterfile/generate'] = array (
+        'title' => "Create master file",
+        'access arguments' => array ( "Combine data" ),
+        'page callback' => 'ebd_masterfile_generate',
+        //'page arguments' => array ( 1, 2 ),
         'type' => MENU_CALLBACK,
     );
 
@@ -871,6 +1400,7 @@ function ebd_permission()
 
     $permissions = array (
         'Combine data' => array ( 'title' => t ( 'Combine data' ) ),
+        'Generate age data' => array ( 'title' => t ( 'Generate age data' ) ),
         'Upload data' => array ( 'title' => t ( 'Upload data' ) ),
     );
 
@@ -1675,11 +2205,11 @@ function ebd_upload_save ( $info )
         array ( 'value' => $num_subjects ) ) );
     $node->field_upload_num_sites = array ( LANGUAGE_NONE => array (
         array ( 'value' => $num_sites ) ) );
-    $node->field_upload_age_min = array ( LANGUAGE_NONE => array (
+    $node->field_upload_age_minf = array ( LANGUAGE_NONE => array (
         array ( 'value' => $age_min ) ) );
     $node->field_upload_age_mean = array ( LANGUAGE_NONE => array (
         array ( 'value' => $age_mean ) ) );
-    $node->field_upload_age_max = array ( LANGUAGE_NONE => array (
+    $node->field_upload_age_maxf = array ( LANGUAGE_NONE => array (
         array ( 'value' => $age_max ) ) );
     $node->field_upload_num_male_subjects = array ( LANGUAGE_NONE => array (
         array ( 'value' => $num_males ) ) );
@@ -1712,35 +2242,6 @@ function ebd_upload_save ( $info )
         //fwrite ( $debug, "agreements : " . print_r ( $agreements, TRUE ) . "\n" );
         foreach ( $agreements as $agreement )
         {
-            // debugging
-            /*
-            if ( isset (
-                $agreement->field_agreements_shared[LANGUAGE_NONE][0]['value'] )
-            )
-                fwrite ( $debug, "here 1\n" );
-            if ( isset (
-                $agreement->field_agreements_usc[LANGUAGE_NONE][0]['value'] ) )
-                fwrite ( $debug, "here 2\n" );
-            if ( $agreement->field_agreements_shared[LANGUAGE_NONE][0]['value']
-                === "1" )
-                fwrite ( $debug, "here 3\n" );
-            if ( $agreement->field_agreements_usc[LANGUAGE_NONE][0]['value']
-                === "1" )
-                fwrite ( $debug, "here 4\n" );
-            */
-
-            // If agreement has yes for USC share and allow them to upload,
-            // update the uploaded field
-            /*
-            if ( isset (
-                $agreement->field_agreements_shared[LANGUAGE_NONE][0]['value'] )
-                && isset (
-                $agreement->field_agreements_usc[LANGUAGE_NONE][0]['value'] ) &&
-                ( $agreement->field_agreements_shared[LANGUAGE_NONE][0]['value']
-                === "1" ) && 
-                ( $agreement->field_agreements_usc[LANGUAGE_NONE][0]['value']
-                === "1" ) )
-            */
             if ( isset (
                 $agreement->field_agreements_usc[LANGUAGE_NONE][0]['value'] ) &&
                 ( $agreement->field_agreements_usc[LANGUAGE_NONE][0]['value']
@@ -1749,7 +2250,6 @@ function ebd_upload_save ( $info )
                 //fwrite ( $debug, "updating agreement : " . print_r ( $agreement, TRUE ) . "\n" );
                 $agreement->field_agreements_uploaded =
                     ebd_value_field_create ( 1 );
-                // array ( LANGUAGE_NONE => array ( array ( "value" => 1 ) ) );
                 node_save ( $agreement );
                 //fwrite ( $debug, "saved agreement : " . print_r ( $agreement, TRUE ) . "\n" );
             }
