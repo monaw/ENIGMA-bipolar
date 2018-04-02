@@ -174,7 +174,7 @@ function ebd_age_data_generate ( $node )
         drupal_goto ( "uploads-list" );
     }
 
-    //$file = $node->field_upload_covariates_file[LANGUAGE_NONE][0]['uri'];
+    $file = $node->field_upload_covariates_file[LANGUAGE_NONE][0]['uri'];
     //fwrite ( $debug, "file : " . print_r ( $file, TRUE ) . "\n" );
     $pi = $node->title;
     //fwrite ( $debug, "pi : " . print_r ( $pi, TRUE ) . "\n" );
