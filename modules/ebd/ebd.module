@@ -468,7 +468,10 @@ function ebd_agreement_form_submit ( $form, &$form_state )
     }
 
     else 
+    {
+        unset ( $_GET['destination'] );
         drupal_goto ( "upload" );
+    }
 }
 
 
