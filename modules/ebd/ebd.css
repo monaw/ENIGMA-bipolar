@@ -22,3 +22,6 @@
 table td, table td *, table th, table th * {
     vertical-align: top;
 }
+
+.url-textfield { display: none !important; }
+
